@@ -1,0 +1,6 @@
+// markdownlint configuration for DCT documentation standard
+// ref: common-support/docs/docs-proposal.md
+{
+  "MD013": false,
+  "MD029": false
+}
