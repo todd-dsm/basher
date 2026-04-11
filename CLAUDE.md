@@ -14,6 +14,3 @@
 - Use agent teams. Spawn only the agents required for the current task.
 - If `etc/process_flow.md` exists, follow the custom process defined there. The custom process names its own orchestrator.
 - Otherwise, follow the standard Cascadian process. See `docs/process-feature-development.md` for the full PDSA cycle.
-
-## Current State
-- (filled after scaffolding)
