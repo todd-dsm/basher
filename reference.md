@@ -82,6 +82,22 @@ Further research:
 
 ---
 
+## Indentation
+
+<!-- Indentation is a preference in most places. It is not a preference in any place where whitespace changes execution — there it is part of the code's behavior. -->
+
+Rules:
+- basher scripts default to 4-space indentation in every committed artifact — template, examples, produced scripts.
+	- *One choice across the kit. Agents producing new scripts emit 4 spaces without further ceremony.*
+- When modifying an existing script, match its indentation. Do not retab as a side effect.
+	- *The author of a script has the right to their own convention. Changing it silently pollutes the diff and disrespects the choice.*
+- Within any one script, one depth and one whitespace choice (spaces or tabs), applied consistently.
+	- *Mixed indentation renders unpredictably across editors and breaks alignment of comments and continuations.*
+- Never reformat whitespace in a way that alters execution. Heredoc body lines, line-continuation trailing whitespace, and string literals are code, not style.
+	- *`<<EOF` emits body lines verbatim, leading whitespace included. `<<-EOF` strips leading tabs only — not spaces. A `\` line continuation requires the backslash to be the last character on the line. Reformatting these silently changes output or breaks the parse.*
+
+---
+
 ## Shebang
 
 <!-- Without a correct shebang, the script runs under the wrong interpreter, or not at all. -->
