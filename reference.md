@@ -313,3 +313,38 @@ Rules:
 	- *Constructs used inside a REQ (conditionals, loops, I/O) have their own sections in this reference.*
 
 ---
+
+## Report
+
+<!-- A script that alters state can summarize what it did. REPORT is the optional closing section that emits that summary, for the executor, after MAIN completes. -->
+
+Rules:
+- REPORT is optional. Include it when the operator needs confirmation of execution stats (counts, outcomes, produced paths). Omit it otherwise.
+	- *The trigger is the operator's need for confirmation, not merely the existence of outcomes. A script can do meaningful work and still not warrant a summary if no one is waiting on the numbers.*
+- When included, REPORT is a top-level section titled by a 79-char rule block with the bare label `REPORT` — no descriptive purpose line, no detail bullets. It sits after MAIN and before the closing exit.
+	- *Goals carry a unique purpose because each one does something different. REPORT's purpose is always the same — surface execution stats to the operator — so the label alone is enough. The `(optional)` qualifier in `template.sh` is meta-info for the template reader; drop it in actual scripts.*
+- When the summary is multi-line, use the multi-line `printf` pattern covered in Line Width.
+	- *Body format is a rendering concern, already specified. REPORT contributes the section framing only.*
+
+---
+
+## Exit
+
+<!-- Every script ends the same way: a signature, then a graceful terminator. A script written properly closes with both. -->
+
+```bash
+# ---
+# fin~
+# ---
+exit 0
+```
+
+Rules:
+- Close every script with a three-line `# --- / # fin~ / # ---` marker, then `exit 0` immediately below — no blank line between them.
+	- *`# fin~` is an artistic expression — the script's deliberate close, written by someone who cares how it reads. `exit 0` is the graceful terminator: explicit success, independent of whatever the last command returned.*
+- Two empty lines precede the opening `# ---` of the marker.
+	- *Same sibling-block separator used throughout. The marker is the script's final sibling.*
+- The marker and `exit 0` are the last lines of the file. Nothing follows them.
+	- *A trailing newline is fine; a trailing comment, unreachable code, or additional statement is not.*
+
+---
