@@ -19,6 +19,7 @@ A public reference of GNU Bash constructs that makes AI coding assistants produc
 - **Markdown as delivery format**: reference.md is Markdown with fenced Bash code blocks. Parseable by any AI tool, readable by humans on GitHub.
 - **No build step**: the repo IS the product. No compilation, no generation, no CI artifacts.
 - **Fetch, don't bundle**: consumers fetch reference.md at invocation time. No vendoring, no caching layers.
+- **Section format**: every construct in reference.md follows the anatomy defined in [reference-format.md](reference-format.md).
 
 ## Environment Prerequisites
 
