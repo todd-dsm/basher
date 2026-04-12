@@ -18,7 +18,7 @@ For edge cases or deeper understanding, each section links to [Wooledge](https:/
 Rules:
 - The starter kit is two files at fixed paths under `scripts/`:
 	- `scripts/template.sh` — the complete, annotated script anatomy.
-	- `scripts/lib/printer.func` — shared output helpers: `print_goal`, `print_req`, `print_pass`, `print_info`, `print_error`.
+	- `scripts/lib/printer.func` — shared output helpers: `print_goal`, `print_req`, `print_pass`, `print_error`.
 	- *Two files, one unit. The template sources the printer; the printer's helpers drive every script's visible output.*
 - Every compliant script sources the printer: `source scripts/lib/printer.func`.
 	- *The Main-program conventions (announcing goals, reporting pass/fail) presuppose these helpers. A script that doesn't source them exits the scope of this reference.*
@@ -47,8 +47,8 @@ Further research:
 <!-- Old terminals wrap anything past 80 columns. Modern ones do the same when windows are split, panes are narrow, or output is piped through `less -S`. A script that only reads cleanly at full width is a script that only reads in ideal conditions. -->
 
 Rules:
-- Keep every line under 80 characters — code, comments, output. Section rules (79-char) and `# ---` markers follow the same limit.
-	- *The constraint is the worst plausible terminal, not the author's. One wrap-imposed line break destroys alignment, indentation, and the reader's ability to scan.*
+- Every line is exactly 79 characters or shorter — never 80, never longer. Code, comments, output, section rules, and `# ---` markers all obey the same hard limit.
+	- *The constraint is the worst plausible terminal, not the author's. 79 is the number because section rules are 79 and every other line lives inside that frame. One wrap-imposed line break destroys alignment, indentation, and the reader's ability to scan.*
 - When a single statement or message cannot fit, break it into a multi-line construct rather than letting the terminal wrap it.
 	- *An author-controlled break is deliberate. A terminal-imposed wrap is noise.*
 - When multi-line output is needed (reports, summaries, banners), a multi-line `printf` is the default form. Preserve the shape of the rendered output in the source.
@@ -61,7 +61,7 @@ Rules:
 Example — a post-run report written in the shape it will render:
 
 ```bash
-printf '\n\n%s\n' """
+printf '\n\n%s\n' "
 
 Post-run report:
 
@@ -71,7 +71,7 @@ Post-run report:
 
 logged: /tmp/script-purpose.log
 
-"""
+"
 ```
 
 Further research:
@@ -85,11 +85,11 @@ Further research:
 <!-- Indentation is a preference in most places. It is not a preference in any place where whitespace changes execution — there it is part of the code's behavior. -->
 
 Rules:
-- basher scripts default to 4-space indentation in every committed artifact — template, examples, produced scripts.
-	- *One choice across the kit. Agents producing new scripts emit 4 spaces without further ceremony.*
-- When modifying an existing script, match its indentation. Do not retab as a side effect.
-	- *The author of a script has the right to their own convention. Changing it silently pollutes the diff and disrespects the choice.*
-- Within any one script, one depth and one whitespace choice (spaces or tabs), applied consistently.
+- basher scripts use 4-space indentation. Always. Every committed artifact — template, examples, produced scripts — indents with four spaces. No tabs, no two-space, no eight-space, no mixing.
+	- *This is the rule, not a default. Agents producing new scripts emit 4 spaces and nothing else. "Default" implies an alternative; there is none inside basher.*
+- When editing a script that already lives outside basher and uses a different convention, match what's there — do not retab as a side effect.
+	- *The author of an external script has the right to their own convention. Changing it silently pollutes the diff. This exception applies only to foreign scripts; basher's own artifacts are 4-space, always.*
+- Within any one script, one depth and one whitespace choice, applied consistently.
 	- *Mixed indentation renders unpredictably across editors and breaks alignment of comments and continuations.*
 - Never reformat whitespace in a way that alters execution. Heredoc body lines, line-continuation trailing whitespace, and string literals are code, not style.
 	- *`<<EOF` emits body lines verbatim; `<<-EOF` strips leading tabs (not spaces); `\` continuations require the backslash as the last character on the line.*
@@ -132,7 +132,7 @@ Further research:
 #           b) required environment variable
 #           c) required input format
 # -----------------------------------------------------------------------------
-#  EXECUTE: ./script.sh [args]                              # how to invoke it
+#  EXECUTE: scripts/name-of-script.sh [args]
 # -----------------------------------------------------------------------------
 ```
 
@@ -151,12 +151,50 @@ Rules:
 	- *Readers scan PURPOSE to decide if this is the script they want. Long prose defeats scanning.*
 - `PREREQS` lists every external dependency: tools, environment variables, permissions, input formats. If none apply yet, write `none` — do not remove the block.
 	- *A script that silently assumes `jq` is installed fails mysteriously. Keeping the PREREQS slot visible prompts the next author to fill it when one is added.*
-- `EXECUTE` shows the exact invocation.
+- `EXECUTE` shows the exact invocation: `scripts/name-of-script.sh` followed by any arguments the script accepts. Nothing else — no inline comments, no commentary, no CWD reminders. The Invocation rule already fixes the CWD; repeating it here is noise.
 	- *Copy-pasteable usage prevents misuse. "How do I run this?" should never be a question.*
 
 Further research:
 1. [ShellCheck directive reference](https://www.shellcheck.net/wiki/Directive): valid directives and placement.
 2. [BashGuide: Practices](https://mywiki.wooledge.org/BashGuide/Practices): broader script hygiene.
+
+---
+
+## Error Mode
+
+<!-- Bash's defaults are lenient: unset variables expand to empty strings, failed commands keep running, broken pipelines return success. A production script turns all three off on line one of its body. Placing the flag line immediately under the header — before anything else executes — makes it the earliest point where behavior could have diverged, and puts it one character away from the debugger's reach. -->
+
+```bash
+#!/usr/bin/env bash
+#  PURPOSE: …
+# -----------------------------------------------------------------------------
+#  PREREQS: …
+# -----------------------------------------------------------------------------
+#  EXECUTE: scripts/name-of-script.sh
+# -----------------------------------------------------------------------------
+set -euo pipefail
+```
+
+Rules:
+- The first executable line of every **executable script** is `set -euo pipefail`, directly under the header's closing `# ---` rule with no blank line between them.
+	- *First executable line means the flags govern the entire script body. No blank above means the line rides with the header as a single opening unit — shebang, header, mode. The reader sees the script's operating posture in one uninterrupted block.*
+- Sourced libraries (`*.func` files) **omit this line**. Shell options set inside a sourced file persist in the caller's shell — a library that runs `set -euo pipefail` silently changes the error-handling posture of every script that sources it. Libraries define functions and return; the caller picks its own error mode.
+	- *Execution runs in a child shell and the flags die with it; sourcing runs in the caller's shell and the flags stay. Libraries must not leak behavior the caller didn't opt into.*
+- Two blank lines separate `set -euo pipefail` from the VARIABLES section that follows — the same separator used before every top-level rule block.
+	- *No carve-out for the error-mode stanza. One rule for vertical space between sections keeps the script's rhythm predictable: two blanks means "new section starts here," everywhere.*
+- Keep all three flags together, in the order `-euo pipefail`. Do not split them across multiple `set` calls.
+	- *One line is easier to read, easier to edit, and keeps the three behaviors visible as a set rather than scattered decisions.*
+- For debugging, add `x`: `set -euxo pipefail`. Remove it when debugging is done.
+	- *The flag line sits at the top of the body precisely so the `x` is a one-character edit at a glance-findable location. A `set -x` buried later traces only part of the run.*
+
+What each flag does:
+- `-e` — exit immediately if any command exits non-zero (outside of tested conditions like `if` and `&&/||`).
+- `-u` — treat expansion of an unset variable as an error, not an empty string.
+- `-o pipefail` — a pipeline's exit status is the rightmost non-zero status, not just the last command's. Without it, `false | true` returns 0.
+
+Further research:
+1. [BashFAQ/105: errexit pitfalls](https://mywiki.wooledge.org/BashFAQ/105): the edge cases and surprises of `set -e`.
+2. [BashGuide: Practices](https://mywiki.wooledge.org/BashGuide/Practices): where these flags fit in broader script hygiene.
 
 ---
 
@@ -170,7 +208,7 @@ Further research:
 # -----------------------------------------------------------------------------
 # ENV — required external inputs, assert early
 : "${API_TOKEN?  API_TOKEN is missing!}"
-: "${1?  first argument required: path to input file}"
+: "${CONFIG_PATH?  CONFIG_PATH must point at a readable file}"
 
 # Sourced — variables shared across scripts
 source scripts/lib/common.env
@@ -216,7 +254,7 @@ Further research:
 # -----------------------------------------------------------------------------
 # FUNCTIONS
 # -----------------------------------------------------------------------------
-# Output helpers: print_goal, print_req, print_pass, print_info, print_error
+# Output helpers: print_goal, print_req, print_pass, print_error
 source scripts/lib/printer.func
 
 # Validate the input file exists and is readable.
@@ -301,8 +339,9 @@ Rules:
 - MAIN uses the top-level section title pattern with the `MAIN` label.
 - MAIN contains one or more Goals. Each Goal is a sequential processing stage that leaves state for the next.
 	- *Goals support the script's PURPOSE. A single-step script has one Goal; a three-stage pipeline has three.*
-- Goal divider: top-level section title pattern with a short `# Goal Purpose` line and optional `#  * detail` bullets. Descriptive — can expand as context requires.
-- Immediately after the closing 79-char rule, call `print_goal 'verb-form announcement'`.
+- Goal divider: top-level section title pattern wrapping a short `# Goal Purpose` line and optional `#  * detail` bullets. This block is written **for the maintainer reading the source** — describe what the Goal does, why, and any context the next author will need. Descriptive prose; can expand as context requires.
+- Immediately after the closing 79-char rule, call `print_goal '…'`. This message is written **for the operator watching the script run** — the same Goal purpose rendered as a short verb-form announcement (typically `-ing`: "Normalizing HR records", "Writing enriched CSV").
+	- *Two audiences, two strings. The comment block explains; the `print_goal` narrates. Do not collapse them — the maintainer wants context, the operator wants a progress line.*
 - The first Goal's top rule is MAIN's closing rule — one shared line, no gap.
 	- *MAIN's closer already provides the separator; doubling it is wasted weight.*
 - Subsequent Goals have their own opening rule, preceded by two empty lines.
@@ -320,13 +359,59 @@ Rules:
 
 ---
 
+## Checks
+
+<!-- Most REQs test a condition. The reference doesn't teach `[[ ]]` or `if` — the agent already has that. What needs saying is how the print helpers compose around the check: one announcement line, one test, one outcome call. Consistency here is what makes script output scannable across the whole codebase. -->
+
+```bash
+# ---
+# REQ1
+# ---
+print_req 'Drop rows without a phone number'
+if [[ -s "$hosts_csv" ]]; then
+    print_pass
+else
+    print_error "input is empty or missing: $hosts_csv"
+fi
+
+
+# ---
+# REQ2
+# ---
+print_req 'Apply migration 0042'
+if ! migrate up 0042; then
+    print_error 'migration 0042 did not apply cleanly'
+fi
+```
+
+Rules:
+- Every REQ that performs a check follows one shape: `print_req` announces, a conditional tests, one of `print_pass` or `print_error` reports the outcome. No variations.
+	- *Three things on three lines, the same three lines every time. Reading a dozen REQs feels like reading the same REQ — the operator's eye locks onto the content, not the scaffolding.*
+- `print_pass` takes no arguments. The `print_req` above it already named what was tested.
+	- *Two strings saying the same thing is noise. The helper prints a short success marker; the reader's context is the REQ description one line up.*
+- `print_error` takes a short reason — a fragment that completes the sentence "it failed because…". It prints a banner to stderr and exits the script with status 1.
+	- *The reason is the one piece of information the operator doesn't already have. Keep it short; the banner does the visual work.*
+- Do not write `exit 1` (or any exit) after `print_error`. It exits for you. Adding one is dead code and moves termination behavior out of a single place.
+	- *Error handling lives in `print_error`. A call site that duplicates the exit splits that responsibility and rots the moment the helper's exit code changes.*
+- Use the `if / then / else / fi` block form, not `&&/||` one-liners, for any check with both a pass and a fail branch.
+	- *Block form reads top-to-bottom: test, pass path, fail path. `cmd && print_pass || print_error "…"` looks equivalent but isn't — if `print_pass` ever returns non-zero, the `||` fires. The block form has no such trap.*
+- When the command *is* the check (no value to compare), use the negated single-branch form: `if ! command; then print_error '…'; fi`. No `print_pass`, no `else`.
+	- *Successful execution under `set -euo pipefail` continues naturally — no success announcement needed beyond the `print_req` above. Forcing a `print_pass` here duplicates the REQ line and adds a branch that can never usefully differ from "kept running".*
+- Do not redirect print helpers. `print_goal`, `print_req`, `print_pass` go to stdout; `print_error` goes to stderr. The helpers manage their own streams.
+	- *Stream discipline is part of their contract. Piping `print_error` to stdout breaks the operator's ability to separate progress from failures with a single `2>errors.log`.*
+
+Further research:
+1. [BashFAQ/105: errexit pitfalls](https://mywiki.wooledge.org/BashFAQ/105): why the block form is safer than `&&/||` chains under `set -e`.
+
+---
+
 ## Report
 
 <!-- A script that alters state can summarize what it did. REPORT is the optional closing section that emits that summary, for the executor, after MAIN completes. -->
 
 Rules:
-- REPORT is optional. Include it when the operator needs confirmation of execution stats (counts, outcomes, produced paths). Omit it otherwise.
-	- *The trigger is the operator's need for confirmation, not merely the existence of outcomes. A script can do meaningful work and still not warrant a summary if no one is waiting on the numbers.*
+- REPORT is optional. Include it when the operator would benefit from statistical pass/fail numbers after execution — counts of items processed, succeeded, failed, skipped. Omit it otherwise.
+	- *The trigger is tallies the operator can act on, not merely the existence of outcomes. A script that writes one file produces an outcome but no statistic; a script that processes 400 records and skipped 12 has numbers worth surfacing.*
 - When included, REPORT uses the top-level section title pattern with the bare label `REPORT` — no descriptive purpose line, no detail bullets. Placement: after MAIN, before exit.
 	- *Goals carry a unique purpose; REPORT's is always the same — surface execution stats. The `(optional)` qualifier in `template.sh` is meta-info; drop it in actual scripts.*
 - When the summary is multi-line, use the multi-line `printf` pattern covered in Line Width.
@@ -346,8 +431,10 @@ exit 0
 ```
 
 Rules:
-- Close every script with a three-line `# --- / # fin~ / # ---` marker, then `exit 0` immediately below — no blank line between them.
+- Close every **executable script** with a three-line `# --- / # fin~ / # ---` marker, then `exit 0` immediately below — no blank line between them.
 	- *`# fin~` is an artistic expression — the script's deliberate close, written by someone who cares how it reads. `exit 0` is the graceful terminator: explicit success, independent of whatever the last command returned.*
+- Sourced libraries (`*.func` files) use `return 0` in place of `exit 0`. Everything else about the closer is the same.
+	- *`exit` from sourced code terminates the caller, not the library. `return` leaves the sourced scope and hands control back to the script that sourced it — the correct terminator for a library.*
 - Two empty lines precede the opening `# ---` of the marker.
 	- *Same sibling-block separator used throughout. The marker is the script's final sibling.*
 - The marker and `exit 0` are the last lines of the file. Nothing follows them.

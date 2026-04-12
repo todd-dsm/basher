@@ -4,7 +4,7 @@ Constructs to cover in `reference.md`. Move items from here into `reference.md` 
 
 ## Preamble
 - [x] Shebang
-- [ ] Strict mode (`set -euo pipefail`, IFS)
+- [x] Strict mode (`set -euo pipefail`, IFS)
 - [x] Script header
 
 ## Variables & Data
