@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "share/plugin.md",
+                "file": "reference.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "plugin"
+              "title": "reference"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "share/plugin.md",
+                "file": "reference.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for plugin"
+              "title": "Backlinks for reference"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "share/plugin.md",
+                "file": "reference.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from plugin"
+              "title": "Outgoing links from reference"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "share/plugin.md",
+                "file": "reference.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of plugin"
+              "title": "Outline of reference"
             }
           }
         ]
@@ -185,16 +185,23 @@
   },
   "active": "0b03706fb0598dfa",
   "lastOpenFiles": [
+    "tmp/syllabus.md",
+    "reference.md",
+    "tmp",
+    "etc/reference-format.md",
+    "README.md",
+    "docs/readme.md",
+    "CLAUDE.md",
+    "docs/tree.md",
+    "docs/development-record.md",
+    "share/plugin.md",
+    "share/agents/writer.md",
+    "share/agents/editor.md",
+    "etc/manifest.md",
+    "etc/rules-project.md",
     "share/plugins/plugin-software.md",
     "share/plugins/plugin-deliberation.md",
     "share/plugins/plugin-content.md",
-    "share/plugins/instructions.md",
-    "share/agents/editor.md",
-    "share/agents/writer.md",
-    "docs/tree.md",
-    "docs/development-record.md",
-    "etc/rules-project.md",
-    "etc/manifest.md",
-    "CLAUDE.md"
+    "share/plugins/instructions.md"
   ]
 }

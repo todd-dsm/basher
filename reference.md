@@ -241,3 +241,75 @@ Further research:
 2. [BashFAQ/084: Returning values](https://mywiki.wooledge.org/BashFAQ/084): why `return` is for status and `echo`/`printf` is for data.
 
 ---
+
+## Main
+
+<!-- MAIN is where the script does its work. It decomposes into Goals — sequential processing stages, each leaving state for the next — and each Goal decomposes into Requirements. The hierarchy is visible in the dividers. -->
+
+```bash
+# ---------------------------------------------------------------------------
+# MAIN
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Normalize incoming HR records
+#  * drops rows with missing phone numbers
+#  * converts all phones to E.164
+# ---------------------------------------------------------------------------
+print_goal 'Normalizing HR records'
+
+
+# ---
+# REQ1
+# ---
+print_req 'Drop rows without a phone number'
+# ... body: whatever legal bash the REQ needs ...
+
+
+# ---
+# REQ2
+# ---
+print_req 'Convert phone numbers to E.164'
+# ... body ...
+
+
+# ---------------------------------------------------------------------------
+# Emit enriched CSV
+#  * writes to /tmp/hr-out.csv
+# ---------------------------------------------------------------------------
+print_goal 'Writing enriched CSV'
+
+
+# ---
+# REQ1
+# ---
+print_req 'Write normalized records to disk'
+# ... body ...
+```
+
+Rules:
+- MAIN is a top-level section titled by a 79-char rule block — same visual weight as VARIABLES and FUNCTIONS.
+	- *The script's structural sections all read as equals.*
+- MAIN contains one or more Goals. Each Goal is a sequential processing stage that leaves state for the next.
+	- *Goals support the script's PURPOSE. A single-step script has one Goal; a three-stage pipeline has three.*
+- Goal divider: 79-char rules both sides, a short `# Goal Purpose` title, optional `#  * detail` bullets for the maintainer. Goals get the same visual weight as top-level sections.
+	- *The divider is the source-reader's view — descriptive, can expand into bullets when context helps.*
+- Immediately after the closing 79-char rule, call `print_goal 'verb-form announcement'` — for the executor.
+	- *Two audiences, two strings. The divider describes; `print_goal` announces. Never combine them.*
+- Two empty lines precede every Goal's opening rule.
+	- *Top-level-section separator; Goals use it.*
+- Each Goal contains one or more REQs — discrete steps the Goal depends on.
+	- *REQs support Goals the way Goals support the PURPOSE.*
+- REQ divider: short three-line form `# --- / # REQN / # ---`. The label is the bare sequential identifier — `REQ1`, `REQ2`, … — and nothing else. Never concatenate it with a purpose string.
+	- *The REQ's purpose lives in `print_req`, not in the divider. The divider identifies; `print_req` describes.*
+- REQ numbering resets per Goal. Each Goal's first REQ is `REQ1`.
+	- *REQs are scoped to their Goal. Per-Goal numbering lets Goals be reordered without renumbering the script.*
+- Immediately after the closing `# ---`, call `print_req 'description'` — for the executor.
+	- *Same two-audience rule as Goals. `REQ1` identifies to the source-reader; `print_req` describes to the operator.*
+- Two empty lines precede every REQ's opening `# ---`.
+	- *Sibling-block separator within a Goal.*
+- The REQ body follows `print_req`. Its content is outside the scope of these rules — a REQ may test a condition, run a command, transform data, loop, anything legal in bash.
+	- *Constructs used inside a REQ (conditionals, loops, I/O) have their own sections in this reference.*
+
+---
