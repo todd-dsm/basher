@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+#  PURPOSE: Screen-printing helpers for basher-compliant scripts.
+# ---------------------------------------------------------------------------
+#  PREREQS: a) sourced, not executed
+#           b) terminal supports ANSI color escapes
+# ---------------------------------------------------------------------------
+#  EXECUTE: source scripts/lib/printer.func
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# VARIABLES
+# ---------------------------------------------------------------------------
+# Guard against multiple sourcing
+if [[ -n ${__PRINTER_FUNC_LOADED:-} ]]; then
+    return 0
+fi
+readonly __PRINTER_FUNC_LOADED=true
+
+line_length='79'
+
+
+# ---------------------------------------------------------------------------
+# FUNCTIONS
+# ---------------------------------------------------------------------------
+# Goal announcement: centered banner bordered with hyphens, to stdout.
+print_goal() {
+    local theMessage="$*"
+    local border_char='-'
+    local border_line padded_message
+
+    printf -v border_line '%*s' "$line_length" ''
+    border_line="${border_line// /$border_char}"
+
+    local message_length=${#theMessage}
+    local total_padding=$((line_length - message_length))
+    local left_padding=$((total_padding / 2))
+    local right_padding=$((total_padding - left_padding))
+
+    printf -v padded_message '%*s%s%*s' \
+        "$left_padding" '' "$theMessage" "$right_padding" ''
+
+    printf '\n\n'
+    printf '%s\n' "$border_line"
+    printf '%s\n' "$padded_message"
+    printf '%s\n' "$border_line"
+}
+
+
+# Requirement announcement: two-space-indented line with newline above.
+print_req() {
+    local theMessage="$*"
+    printf '\n  %s\n' "$theMessage"
+}
+
+
+# Pass marker: green "test passed" line, 4-space indent, to stdout.
+print_pass() {
+    local green='\033[0;32m'
+    local reset='\033[0m'
+    printf '    %btest passed%b\n' "$green" "$reset"
+}
+
+
+# Error announcement: red banner bordered with tildes, to stderr, exit 1.
+print_error() {
+    local theMessage="$*"
+    local border_char='~'
+    local red='\033[0;31m'
+    local reset='\033[0m'
+    local border_line padded_message
+
+    printf -v border_line '%*s' "$line_length" ''
+    border_line="${border_line// /$border_char}"
+
+    local message_length=${#theMessage}
+    local total_padding=$((line_length - message_length))
+    local left_padding=$((total_padding / 2))
+    local right_padding=$((total_padding - left_padding))
+
+    printf -v padded_message '%*s%s%*s' \
+        "$left_padding" '' "$theMessage" "$right_padding" ''
+
+    printf "${red}%s\n" "$border_line" >&2
+    printf '%s\n' "$padded_message" >&2
+    printf "%s${reset}\n" "$border_line" >&2
+    printf '\n' >&2
+    exit 1
+}
+
+
+# ---
+# fin~
+# ---
+return 0
