@@ -96,6 +96,40 @@ Rules:
 
 ---
 
+## Quoting
+
+<!-- Unquoted expansion runs two passes most authors didn't ask for: word-splitting on IFS, then pathname expansion on any token that looks like a glob. A filename with a space or a `*` silently becomes multiple arguments or a list of matches. The rule isn't "quote when it matters" — it's "quote always; the only time you don't is when word-splitting is exactly what you mean." -->
+
+```bash
+# DO
+cp "$src" "$dst"
+for f in "${files[@]}"; do process "$f"; done
+if [[ "$status" = 'ready' ]]; then ...
+
+# DON'T
+cp $src $dst                    # src with a space becomes two args
+for f in ${files[@]}; do        # elements re-split on IFS
+if [[ $status = ready ]]; then  # RHS parsed as a glob, not a literal
+```
+
+Rules:
+- Quote every expansion. `"$var"`, `"$@"`, `"$(cmd)"`, `"${arr[@]}"`. In command position, in test brackets, in assignments, in strings — everywhere an expansion appears. This is the rule 99% of the time.
+	- *Quotes suppress word-splitting and pathname expansion. You almost always want neither. Treat unquoted expansion as a deliberate, documented choice — not a default.*
+- The only exception: when word-splitting or globbing is the explicit purpose of the expansion. An unquoted `for f in *.log` invokes pathname expansion on purpose; an unquoted `cmd $pre_built_args` splits a pre-built argument string on purpose. These are rare and should read as rare.
+	- *The carve-out is narrow: if the expansion would do exactly the right thing quoted, quote it. Reach for the unquoted form only when the splitting or globbing is the point.*
+- Prefer single quotes for literal strings. Use double quotes only when expansion is intended.
+	- *Single quotes suppress `$`, backticks, and `\` — less to audit. Upgrading to double quotes the moment a `$` appears inside is lighter than remembering which expansions a double-quoted literal will interpret.*
+- Arrays expand as `"${arr[@]}"`. Never `${arr[@]}`, `${arr[*]}`, or `"${arr[*]}"` — each is subtly different and almost never what you want.
+	- *`"${arr[@]}"` is the one form that yields one shell word per element, preserving boundaries. The other three collapse or re-split in ways that corrupt data with whitespace or glob metacharacters in it.*
+- Inside `[[ ]]`, quote the right-hand side of `=`/`!=` for literal comparison. Unquoted, the RHS is a glob pattern.
+	- *`[[ "$f" = "*.log" ]]` compares against the literal string `*.log`. `[[ "$f" = *.log ]]` matches any filename ending in `.log`. Both are legal; 95% of the time the quoted, literal form is the one intended.*
+
+Further research:
+1. [Quotes](https://mywiki.wooledge.org/Quotes): the authoritative treatment — when each quote form matters and when it doesn't.
+2. [BashPitfalls](https://mywiki.wooledge.org/BashPitfalls): the first dozen entries are almost all unquoted-expansion bugs.
+
+---
+
 ## Shebang
 
 <!-- Without a correct shebang, the script runs under the wrong interpreter, or not at all. -->

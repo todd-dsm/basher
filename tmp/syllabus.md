@@ -9,7 +9,7 @@ Constructs to cover in `reference.md`. Move items from here into `reference.md` 
 
 ## Variables & Data
 - [ ] Variable declaration (naming, `local`, `readonly`, `declare`)
-- [ ] Quoting (single vs double vs escaped)
+- [x] Quoting (single vs double vs escaped)
 - [ ] Parameter expansion (`${var:-default}`, `${var%pattern}`, etc.)
 - [ ] Command substitution (`$(...)` vs backticks)
 - [ ] Arithmetic (`$(( ))`, `(( ))`)
