@@ -22,8 +22,6 @@ Rules:
 	- *Two files, one unit. The template sources the printer; the printer's helpers drive every script's visible output.*
 - Every compliant script sources the printer: `source scripts/lib/printer.func`.
 	- *The Main-program conventions (announcing goals, reporting pass/fail) presuppose these helpers. A script that doesn't source them exits the scope of this reference.*
-- Downstream projects mirror the layout — `scripts/template.sh` and `scripts/lib/printer.func` at the project root, every time.
-	- *One convention across basher and its users. Every project has the same two files at the same two paths.*
 
 ---
 
@@ -49,7 +47,7 @@ Further research:
 <!-- Old terminals wrap anything past 80 columns. Modern ones do the same when windows are split, panes are narrow, or output is piped through `less -S`. A script that only reads cleanly at full width is a script that only reads in ideal conditions. -->
 
 Rules:
-- Keep every line — code, comments, output — under 80 characters. The 79-char section rules and `# ---` sub-block markers are instances of the same discipline.
+- Keep every line under 80 characters — code, comments, output. Section rules (79-char) and `# ---` markers follow the same limit.
 	- *The constraint is the worst plausible terminal, not the author's. One wrap-imposed line break destroys alignment, indentation, and the reader's ability to scan.*
 - When a single statement or message cannot fit, break it into a multi-line construct rather than letting the terminal wrap it.
 	- *An author-controlled break is deliberate. A terminal-imposed wrap is noise.*
@@ -94,7 +92,7 @@ Rules:
 - Within any one script, one depth and one whitespace choice (spaces or tabs), applied consistently.
 	- *Mixed indentation renders unpredictably across editors and breaks alignment of comments and continuations.*
 - Never reformat whitespace in a way that alters execution. Heredoc body lines, line-continuation trailing whitespace, and string literals are code, not style.
-	- *`<<EOF` emits body lines verbatim, leading whitespace included. `<<-EOF` strips leading tabs only — not spaces. A `\` line continuation requires the backslash to be the last character on the line. Reformatting these silently changes output or breaks the parse.*
+	- *`<<EOF` emits body lines verbatim; `<<-EOF` strips leading tabs (not spaces); `\` continuations require the backslash as the last character on the line.*
 
 ---
 
@@ -190,12 +188,10 @@ hosts_csv='etc/hosts.csv'
 Rules:
 - One block, near the top, after the header. No late `foo=bar` buried in the main program.
 	- *A single block is the only place you look to change behavior or audit inputs. Debugging with `set -x` then traces every expansion against a known set.*
-- Wrap the block in 79-char `# ---` rules (`# ` + 77 dashes) with a `VARIABLES` label. The same pattern names every top-level section: `HEADER`, `VARIABLES`, `FUNCTIONS`, `MAIN`. The rule block *is* the section title — there is no prose heading above it.
+- Wrap the block in 79-char `# ---` rules (`# ` + 77 dashes) with a `VARIABLES` label. This is the **top-level section title pattern** — used by every top-level section (`VARIABLES`, `FUNCTIONS`, `MAIN`, `REPORT`) and by Goals inside MAIN. The rule block *is* the section title; there is no prose heading above it.
 	- *The rule block is the script's hardest visual break: "new phase starts here." Nothing else in the script uses that pattern.*
-- Separate top-level sections with two empty lines before the rule block.
-	- *Two blank lines + full-width rule is the top-of-hierarchy separator. Sub-blocks (individual functions, individual requirements in MAIN) use two blank lines + a narrower comment block — never the full rule.*
-- The first line of content follows the section title immediately — no blank line between the closing rule and the first comment or statement.
-	- *The title and its body are one unit. A gap would suggest another separator level that doesn't exist.*
+- Two blank lines precede every top-level rule block; content follows the closing rule immediately, no gap.
+	- *Top-of-hierarchy separator: two blank lines above, no gap below. Sub-blocks (functions, REQs in MAIN) use the same two-blank-lines pattern with a narrower `# ---` marker instead of the full rule.*
 - Assert required inputs with `: "${VAR?  message}"`. The script exits immediately if unset.
 	- *Failing at the top with a named variable beats failing 200 lines later with a cryptic unbound-variable error or — worse — silent wrong behavior on an empty expansion.*
 - Group by origin: ENV (external), sourced (shared), local assignments, data pointers. Prune groups not used in this script — `template.sh` carries the full shape for reference.
@@ -239,8 +235,8 @@ render_host() {
 Rules:
 - One block, after Variables, before the main program. Every function defined before it is called.
 	- *Bash resolves function names at call time, but a reader scans top-down. Defining up front means no "where is this defined?" hunts, and no ordering surprises when the main program is rearranged.*
-- Wrap the block in 79-char `# ---` rules (`# ` + 77 dashes) with a `FUNCTIONS` label — the same full-width title pattern used by `HEADER`, `VARIABLES`, and `MAIN`. Two blank lines precede the rule block; the first line of content follows immediately with no blank line.
-	- *Consistent top-level separator across every section. The script reads as HEADER → VARIABLES → FUNCTIONS → MAIN, always, with the same visual weight between them.*
+- Wrap the block in the top-level section title pattern (see Variables) with a `FUNCTIONS` label.
+	- *Consistent visual weight with VARIABLES and MAIN.*
 - Source shared libraries here, not scattered through the script. Annotate what each provides.
 	- *A single `source` site is the only place to look for external symbols. The annotation tells the reader which names entered the namespace without opening the library.*
 - One purpose per function. Name `verb_noun`, lowercase, underscores.
@@ -260,7 +256,7 @@ Further research:
 
 ## Main
 
-<!-- MAIN is where the script does its work. It decomposes into Goals — sequential processing stages, each leaving state for the next — and each Goal decomposes into Requirements. The hierarchy is visible in the dividers. -->
+<!-- MAIN is where the script does its work. It decomposes into Goals — sequential processing stages, each leaving state for the next — and each Goal decomposes into Requirements. Dividers address the source-reader (maintainer); `print_*` calls address the executor (operator). Two audiences, two strings — never combine them. -->
 
 ```bash
 # ---------------------------------------------------------------------------
@@ -302,26 +298,21 @@ print_req 'Write normalized records to disk'
 ```
 
 Rules:
-- MAIN is a top-level section titled by a 79-char rule block — same visual weight as VARIABLES and FUNCTIONS.
-	- *The script's structural sections all read as equals.*
+- MAIN uses the top-level section title pattern with the `MAIN` label.
 - MAIN contains one or more Goals. Each Goal is a sequential processing stage that leaves state for the next.
 	- *Goals support the script's PURPOSE. A single-step script has one Goal; a three-stage pipeline has three.*
-- Goal divider: 79-char rules both sides, a short `# Goal Purpose` title, optional `#  * detail` bullets for the maintainer. Goals get the same visual weight as top-level sections.
-	- *The divider is the source-reader's view — descriptive, can expand into bullets when context helps.*
-- Immediately after the closing 79-char rule, call `print_goal 'verb-form announcement'` — for the executor.
-	- *Two audiences, two strings. The divider describes; `print_goal` announces. Never combine them.*
-- The first Goal's top rule is MAIN's closing rule — they share a single line, no blank space between MAIN's label and the first Goal's label.
-	- *MAIN's closing rule already provides the separator; adding a second rule would be doubled weight for no reader benefit. The section title and its first Goal compress into one unit.*
+- Goal divider: top-level section title pattern with a short `# Goal Purpose` line and optional `#  * detail` bullets. Descriptive — can expand as context requires.
+- Immediately after the closing 79-char rule, call `print_goal 'verb-form announcement'`.
+- The first Goal's top rule is MAIN's closing rule — one shared line, no gap.
+	- *MAIN's closer already provides the separator; doubling it is wasted weight.*
 - Subsequent Goals have their own opening rule, preceded by two empty lines.
 	- *Top-level-section separator applied between Goals that don't share a boundary with MAIN.*
 - Each Goal contains one or more REQs — discrete steps the Goal depends on.
 	- *REQs support Goals the way Goals support the PURPOSE.*
-- REQ divider: short three-line form `# --- / # REQN / # ---`. The label is the bare sequential identifier — `REQ1`, `REQ2`, … — and nothing else. Never concatenate it with a purpose string.
-	- *The REQ's purpose lives in `print_req`, not in the divider. The divider identifies; `print_req` describes.*
+- REQ divider: short three-line form `# --- / # REQN / # ---`. The label is the bare sequential identifier — `REQ1`, `REQ2`, … — nothing else. Never concatenate with a purpose string.
 - REQ numbering resets per Goal. Each Goal's first REQ is `REQ1`.
 	- *REQs are scoped to their Goal. Per-Goal numbering lets Goals be reordered without renumbering the script.*
-- Immediately after the closing `# ---`, call `print_req 'description'` — for the executor.
-	- *Same two-audience rule as Goals. `REQ1` identifies to the source-reader; `print_req` describes to the operator.*
+- Immediately after the closing `# ---`, call `print_req 'description'`.
 - Two empty lines precede every REQ's opening `# ---`.
 	- *Sibling-block separator within a Goal.*
 - The REQ body follows `print_req`. Its content is outside the scope of these rules — a REQ may test a condition, run a command, transform data, loop, anything legal in bash.
@@ -336,8 +327,8 @@ Rules:
 Rules:
 - REPORT is optional. Include it when the operator needs confirmation of execution stats (counts, outcomes, produced paths). Omit it otherwise.
 	- *The trigger is the operator's need for confirmation, not merely the existence of outcomes. A script can do meaningful work and still not warrant a summary if no one is waiting on the numbers.*
-- When included, REPORT is a top-level section titled by a 79-char rule block with the bare label `REPORT` — no descriptive purpose line, no detail bullets. It sits after MAIN and before the closing exit.
-	- *Goals carry a unique purpose because each one does something different. REPORT's purpose is always the same — surface execution stats to the operator — so the label alone is enough. The `(optional)` qualifier in `template.sh` is meta-info for the template reader; drop it in actual scripts.*
+- When included, REPORT uses the top-level section title pattern with the bare label `REPORT` — no descriptive purpose line, no detail bullets. Placement: after MAIN, before exit.
+	- *Goals carry a unique purpose; REPORT's is always the same — surface execution stats. The `(optional)` qualifier in `template.sh` is meta-info; drop it in actual scripts.*
 - When the summary is multi-line, use the multi-line `printf` pattern covered in Line Width.
 	- *Body format is a rendering concern, already specified. REPORT contributes the section framing only.*
 
