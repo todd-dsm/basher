@@ -11,17 +11,19 @@ For edge cases or deeper understanding, each section links to [Wooledge](https:/
 
 ---
 
-## New Scripts
+## Starter Kit
 
-<!-- A canonical starting point beats reconstructing the anatomy from memory or copying from a neighboring (possibly already-pruned) script. -->
+<!-- basher ships two paired artifacts at canonical paths. Every compliant script presumes both. -->
 
 Rules:
-- New scripts are copied from `template.sh`. Existing scripts are modified in place.
-	- *`template.sh` is the maximalist anatomy: every section, every group, with commented examples showing the shape of each slot. Starting anywhere else risks missing a slot or inheriting a neighbor's pruning.*
-- Prune slots that aren't used in the finished script — empty groups, commented placeholders, unused section titles. Every line in a shipped script means something.
-	- *The visible-empty-slot prompt lives in `template.sh`, not in every derived script. The template carries the reservoir; the script carries only what it uses.*
-- When conventions change, update `template.sh` first. Derived scripts inherit by being newly derived, not by bulk retrofit.
-	- *`template.sh` is the source of correctness for all future scripts. Changes flow down from it, not up from individual scripts.*
+- The starter kit is two files at fixed paths under `scripts/`:
+	- `scripts/template.sh` — the complete, annotated script anatomy.
+	- `scripts/lib/printer.func` — shared output helpers: `print_goal`, `print_req`, `print_pass`, `print_info`, `print_error`.
+	- *Two files, one unit. The template sources the printer; the printer's helpers drive every script's visible output.*
+- Every compliant script sources the printer: `source scripts/lib/printer.func`.
+	- *The Main-program conventions (announcing goals, reporting pass/fail) presuppose these helpers. A script that doesn't source them exits the scope of this reference.*
+- Downstream projects mirror the layout — `scripts/template.sh` and `scripts/lib/printer.func` at the project root, every time.
+	- *One convention across basher and its users. Every project has the same two files at the same two paths.*
 
 ---
 
@@ -39,6 +41,44 @@ Rules:
 
 Further research:
 1. [BashFAQ/028: Script location](https://mywiki.wooledge.org/BashFAQ/028): why `$0` and `$(dirname "$0")` are unreliable, and why a CWD convention is the stable answer.
+
+---
+
+## Line Width
+
+<!-- Old terminals wrap anything past 80 columns. Modern ones do the same when windows are split, panes are narrow, or output is piped through `less -S`. A script that only reads cleanly at full width is a script that only reads in ideal conditions. -->
+
+Rules:
+- Keep every line — code, comments, output — under 80 characters. The 79-char section rules and `# ---` sub-block markers are instances of the same discipline.
+	- *The constraint is the worst plausible terminal, not the author's. One wrap-imposed line break destroys alignment, indentation, and the reader's ability to scan.*
+- When a single statement or message cannot fit, break it into a multi-line construct rather than letting the terminal wrap it.
+	- *An author-controlled break is deliberate. A terminal-imposed wrap is noise.*
+- When multi-line output is needed (reports, summaries, banners), a multi-line `printf` is the default form. Preserve the shape of the rendered output in the source.
+	- *What you write is what the reader sees. Collapsing a shaped report into a single 200-char line trades readability in the source for readability nowhere.*
+- Reach for a heredoc (`cat <<EOF` / `<<'EOF'`) when the block is large static text, embeds literal `$` or backticks, or feeds another command's stdin. Not every multi-line case is a heredoc case.
+	- *Heredocs are purpose-built for "here is a chunk of text, pass it through." For a short report with a few variable substitutions, `printf` is lighter and reads more directly.*
+- Heredocs pair especially well with `envsubst` for generating config files, templates, and manifests from a fixed template plus environment variables.
+	- *`cat <<'EOF' | envsubst` keeps the template literal in the source — no shell expansion mid-heredoc — and does a single, predictable substitution pass at the end. It's the cleanest way to render a Kubernetes manifest, Terraform vars file, or service config from a script.*
+
+Example — a post-run report written in the shape it will render:
+
+```bash
+printf '\n\n%s\n' """
+
+Post-run report:
+
+* removed thing:  success
+* modified thing: success
+* added thing:    success
+
+logged: /tmp/script-purpose.log
+
+"""
+```
+
+Further research:
+1. [BashFAQ/032: printf](https://mywiki.wooledge.org/BashFAQ/032): formatted output, the preferred tool over `echo` for anything non-trivial.
+2. [HereDocument](https://mywiki.wooledge.org/HereDocument): `cat <<EOF` as the alternative multi-line construct.
 
 ---
 
@@ -199,43 +239,5 @@ Rules:
 Further research:
 1. [BashProgramming: Functions](https://mywiki.wooledge.org/BashProgramming#Functions): definition syntax, scope, `local`, and return conventions in one place.
 2. [BashFAQ/084: Returning values](https://mywiki.wooledge.org/BashFAQ/084): why `return` is for status and `echo`/`printf` is for data.
-
----
-
-## Line Width
-
-<!-- Old terminals wrap anything past 80 columns. Modern ones do the same when windows are split, panes are narrow, or output is piped through `less -S`. A script that only reads cleanly at full width is a script that only reads in ideal conditions. -->
-
-Rules:
-- Keep every line — code, comments, output — under 80 characters. The 79-char section rules and `# ---` sub-block markers are instances of the same discipline.
-	- *The constraint is the worst plausible terminal, not the author's. One wrap-imposed line break destroys alignment, indentation, and the reader's ability to scan.*
-- When a single statement or message cannot fit, break it into a multi-line construct rather than letting the terminal wrap it.
-	- *An author-controlled break is deliberate. A terminal-imposed wrap is noise.*
-- When multi-line output is needed (reports, summaries, banners), a multi-line `printf` is the default form. Preserve the shape of the rendered output in the source.
-	- *What you write is what the reader sees. Collapsing a shaped report into a single 200-char line trades readability in the source for readability nowhere.*
-- Reach for a heredoc (`cat <<EOF` / `<<'EOF'`) when the block is large static text, embeds literal `$` or backticks, or feeds another command's stdin. Not every multi-line case is a heredoc case.
-	- *Heredocs are purpose-built for "here is a chunk of text, pass it through." For a short report with a few variable substitutions, `printf` is lighter and reads more directly.*
-- Heredocs pair especially well with `envsubst` for generating config files, templates, and manifests from a fixed template plus environment variables.
-	- *`cat <<'EOF' | envsubst` keeps the template literal in the source — no shell expansion mid-heredoc — and does a single, predictable substitution pass at the end. It's the cleanest way to render a Kubernetes manifest, Terraform vars file, or service config from a script.*
-
-Example — a post-run report written in the shape it will render:
-
-```bash
-printf '\n\n%s\n' """
-
-Post-run report:
-
-* removed thing:  success
-* modified thing: success
-* added thing:    success
-
-logged: /tmp/script-purpose.log
-
-"""
-```
-
-Further research:
-1. [BashFAQ/032: printf](https://mywiki.wooledge.org/BashFAQ/032): formatted output, the preferred tool over `echo` for anything non-trivial.
-2. [HereDocument](https://mywiki.wooledge.org/HereDocument): `cat <<EOF` as the alternative multi-line construct.
 
 ---
