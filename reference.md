@@ -74,3 +74,44 @@ Further research:
 2. [BashGuide: Practices](https://mywiki.wooledge.org/BashGuide/Practices): broader script hygiene.
 
 ---
+
+## Variables
+
+<!-- Scattered assignments make scripts hard to tune and impossible to debug by inspection. One block, up top, lets you change behavior in one place and trace every expansion with `set -x`. -->
+
+```bash
+# -----------------------------------------------------------------------------
+# VARIABLES
+# -----------------------------------------------------------------------------
+# ENV — required external inputs, assert early
+: "${API_TOKEN?  API_TOKEN is missing!}"
+: "${1?  first argument required: path to input file}"
+
+# Sourced — variables shared across scripts
+source scripts/lib/common.env
+
+# Assignments and flags
+region='us-west-2'
+dry_run=false
+
+# Data — structured inputs the script reads
+hosts_csv='etc/hosts.csv'
+```
+
+Rules:
+- One block, near the top, after the header. No late `foo=bar` buried in the main program.
+	- *A single block is the only place you look to change behavior or audit inputs. Debugging with `set -x` then traces every expansion against a known set.*
+- Wrap the block in 78-char `# ---` rules with a `VARIABLES` label. Same for every top-level section.
+	- *The rules break a long script into scannable regions. Without them, a 300-line script reads as one wall of code.*
+- Assert required inputs with `: "${VAR?  message}"`. The script exits immediately if unset.
+	- *Failing at the top with a named variable beats failing 200 lines later with a cryptic unbound-variable error or — worse — silent wrong behavior on an empty expansion.*
+- Group by origin: ENV (external), sourced (shared), local assignments, data pointers. Keep the grouping even if a group is empty.
+	- *The shape of the block tells the next reader what the script depends on at a glance. An empty group is a truthful "none," not clutter.*
+- Quote assignments with lowercase names. Reserve `UPPER_CASE` for exported/environment variables.
+	- *Convention from POSIX forward. Mixing cases makes `set -x` output harder to scan.*
+
+Further research:
+1. [BashGuide: Parameters](https://mywiki.wooledge.org/BashGuide/Parameters): assignment, scoping, and expansion basics.
+2. [BashFAQ/073: Parameter expansion](https://mywiki.wooledge.org/BashFAQ/073): the `${var?}`, `${var:-default}`, `${var:=default}` family.
+
+---
