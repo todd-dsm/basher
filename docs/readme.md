@@ -41,6 +41,18 @@ Read `reference.md` on GitHub. That's it.
 
 Admin/sudo permissions may be required if these tools are not already installed — arrange access before starting.
 
+### Recommended ShellCheck config
+
+basher scripts are invoked from the repo root, so sourced paths like `source scripts/lib/printer.func` resolve against the caller's CWD — not the script's file location. ShellCheck's SC1091 check doesn't recognize this convention and reports a false positive on every compliant basher script.
+
+Silence it globally by creating `~/.shellcheckrc`:
+
+```bash
+echo 'disable=SC1091' >> ~/.shellcheckrc
+```
+
+A per-project `.shellcheckrc` at the repo root works just as well if you'd rather not change home-dir config.
+
 ### Clone and verify
 
 ```bash

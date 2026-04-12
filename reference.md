@@ -108,7 +108,7 @@ Rules:
 
 # DON'T
 #!/bin/bash        # hardcoded path: breaks on NixOS, FreeBSD, some containers
-#!/bin/sh          # POSIX sh, not Bash: no arrays, no [[ ]], no process substitution
+#!/bin/sh          # POSIX sh: no arrays, no [[ ]], no process substitution
 ```
 
 Rules:
@@ -144,7 +144,7 @@ Rules:
 - If (and only if) ShellCheck flags a rule you must suppress, add the directive directly below the shebang: one rule per line, each with an inline reason.
 
   ```bash
-   # shellcheck disable=SC2317     # functions invoked via trap look unreachable to the linter
+   # shellcheck disable=SC2317     # trap handler; looks unreachable to linter
   ```
 
   Do not invent rule numbers. Do not add disables pre-emptively. No disables = no line.
@@ -220,7 +220,7 @@ Further research:
 # -----------------------------------------------------------------------------
 # FUNCTIONS
 # -----------------------------------------------------------------------------
-# Sourced — shared helpers: print_goal, print_req, print_pass, print_info, print_error
+# Output helpers: print_goal, print_req, print_pass, print_info, print_error
 source scripts/lib/printer.func
 
 # Validate the input file exists and is readable.
@@ -266,9 +266,6 @@ Further research:
 # ---------------------------------------------------------------------------
 # MAIN
 # ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
 # Normalize incoming HR records
 #  * drops rows with missing phone numbers
 #  * converts all phones to E.164
@@ -313,8 +310,10 @@ Rules:
 	- *The divider is the source-reader's view — descriptive, can expand into bullets when context helps.*
 - Immediately after the closing 79-char rule, call `print_goal 'verb-form announcement'` — for the executor.
 	- *Two audiences, two strings. The divider describes; `print_goal` announces. Never combine them.*
-- Two empty lines precede every Goal's opening rule.
-	- *Top-level-section separator; Goals use it.*
+- The first Goal's top rule is MAIN's closing rule — they share a single line, no blank space between MAIN's label and the first Goal's label.
+	- *MAIN's closing rule already provides the separator; adding a second rule would be doubled weight for no reader benefit. The section title and its first Goal compress into one unit.*
+- Subsequent Goals have their own opening rule, preceded by two empty lines.
+	- *Top-level-section separator applied between Goals that don't share a boundary with MAIN.*
 - Each Goal contains one or more REQs — discrete steps the Goal depends on.
 	- *REQs support Goals the way Goals support the PURPOSE.*
 - REQ divider: short three-line form `# --- / # REQN / # ---`. The label is the bare sequential identifier — `REQ1`, `REQ2`, … — and nothing else. Never concatenate it with a purpose string.
