@@ -376,6 +376,8 @@ Rules:
 	- *`>/dev/null` redirects stdout; `2>&1` points stderr at the same place. Two operators, two intents, in the order they happen. `&>` collapses both into one symbol that reads as "background-redirect" at a glance — shorter, less clear. Favor the form a reader can pronounce. Reach for this only to quiet a misbehaving tool that writes to the wrong stream; real errors are handled, not hidden.*
 - Expand template variables into a file with `envsubst <template >output`. Do not pipe through `cat`.
 	- *envsubst substitutes exported `$VAR` references in the input, leaving other text literal — a compact templating idiom. The `cat <tmpl | envsubst >out` form spawns a useless process.*
+- Redirect a file into a command with `cmd <file`. Do not `cat file | cmd`.
+	- *The `cat` form spawns an extra process for no reason, and breaks for commands that need seekable input (random-access, not a byte stream). The anti-pattern has a name: UUOC — Useless Use of Cat.*
 - Heredocs: unquoted delimiter (`<<EOF`) interpolates the body; quoted delimiter (`<<'EOF'`) treats it as literal. Quote whenever the body contains `$`, backticks, or `\` that should pass through unchanged.
 	- *The unquoted form is a reader-trap: `$PATH` in the body becomes the caller's `PATH`, not the literal string. When writing a script-into-a-script or embedding config with shell-looking syntax, quote the delimiter.*
 - Herestring `<<<` feeds a single string to a command's stdin — most often paired with `read` to split a line into fields. See the reference for the full shape.
@@ -424,6 +426,41 @@ Rules:
 Further research:
 1. [BashFAQ/001: How can I read a file line-by-line?](https://mywiki.wooledge.org/BashFAQ/001): exact rationale for `IFS= read -r` and the `< <(cmd)` pattern, with edge cases (final newline, field splitting).
 2. [BashGuide: TestsAndConditionals](https://mywiki.wooledge.org/BashGuide/TestsAndConditionals#Loops): the complete loop family (`for`, `while`, `until`, C-style).
+
+---
+
+## External Tools
+
+<!-- Two tools dominate real sysadmin scripts: `find` and `curl`. Learn the safe shape once; don't improvise the flags. -->
+
+```bash
+# find — DO: batched exec, or null-safe pipeline
+find /var/log -type f -name '*.log' -mtime -1 -exec rm {} +
+find "$HOME/vms" -name '.DS_Store' -print0 | xargs -0 rm
+
+# find — DON'T
+find /var/log -name '*.log' -exec rm {} \;      # one fork per match
+find /var/log -name '*.log' | xargs rm          # breaks on spaces/quotes in names
+
+# curl — DO
+curl -fsSL -o "$output" "$url"
+curl -fsSL "$url" | sudo tar -xzC /usr/local
+
+# curl — DON'T
+curl "$url" -o "$output"                         # no fail-fast, no redirects, progress noise
+```
+
+Rules:
+- `find … -exec cmd {} +` for bulk actions. `-print0 | xargs -0` when a pipeline is required.
+	- *The `+` form batches matches into one `cmd` invocation; `\;` forks once per file. The `-print0 | xargs -0` form is null-delimited so filenames with spaces, newlines, or quotes survive — plain `| xargs` splits on whitespace and corrupts the input.*
+- The `-fsSL` flag set for curl is invariant. `-f` fails on HTTP errors, `-sS` is silent-but-shows-real-errors, `-L` follows redirects.
+	- *Each flag fixes a real footgun: without `-f`, a 404's HTML body lands in the output file; without `-sS`, either progress bars pollute stdout or hard errors are swallowed; without `-L`, a 301 silently returns nothing. Memorize the four letters as one token.*
+- On macOS, `-exec cmd {} +` stops iterating on the first nonzero exit from `cmd` (Darwin bug). When partial results would be silent data loss, fall back to `-print0 | xargs -0`.
+
+Further research:
+1. [wooledge: UsingFind](https://mywiki.wooledge.org/UsingFind) — §7 "Actions in bulk" has the full xargs / `-print0` / `-exec +` treatment.
+2. [BashFAQ/119](https://mywiki.wooledge.org/BashFAQ/119) — UUOC rationale.
+3. [curl manpage](https://curl.se/docs/manpage.html) — every flag.
 
 ---
 
