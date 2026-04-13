@@ -21,6 +21,13 @@ A public reference of GNU Bash constructs that makes AI coding assistants produc
 - **Fetch, don't bundle**: consumers fetch reference.md at invocation time. No vendoring, no caching layers.
 - **Section format**: every construct in reference.md follows the anatomy defined in [reference-format.md](reference-format.md).
 
+## Version Tags
+
+- Tag milestones with annotated tags, never lightweight: `git tag -a <version> -m "<short description>"`.
+- Format: `v<MAJOR>.<MINOR>.<PATCH>-<suffix>` (e.g., `v0.0.0-base`). The suffix names the milestone in one word.
+- Message follows the commit convention: a single short line, no body.
+- Push tags explicitly when ready: `git push origin <tag>`. Tags don't ride along with `git push` by default.
+
 ## Environment Prerequisites
 
 Git >= 2.0
