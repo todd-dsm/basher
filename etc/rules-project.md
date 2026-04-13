@@ -4,6 +4,26 @@
 
 A public reference of GNU Bash constructs that makes AI coding assistants produce sysadmin-quality shell scripts. The product is `reference.md` — a single-file, fetch-once source of truth consumed by AI tools via raw.githubusercontent.com.
 
+## Authoring Principles
+
+Two rules govern how sections are written in `reference.md`.
+
+### Happy-path first, link the rest
+
+For any bash construct, one solution is used more than the others — that's the happy path. Give the calling agent (ca) that one, in a short complete example, plus the rule that pins it. For edge and corner cases, link to Wooledge / BashFAQ under "Further research" and trust the ca to do its own research when the happy path doesn't fit.
+
+- Never copy external documentation into `reference.md`. Paraphrase the rule, link the doc.
+- Every section has a "Further research" list with at least one authoritative link.
+- basher can't rewrite the world's bash documentation and shouldn't try. One well-chosen example + a pointer is higher-leverage than a comprehensive treatment.
+
+### CA-perspective test
+
+Before writing a rule, put yourself in the ca's position and ask: does the ca already know how to do this from general bash knowledge, or does basher provide specific style or placement guidance the ca couldn't derive on its own?
+
+- If the ca already knows and basher adds nothing unique: mark the syllabus item `NA:` with a one-line note and skip. Don't write the rule.
+- If the ca would guess wrong or be unopinionated where basher has a preference: write the rule.
+- The goal is something highly probable to solve the ca's issue — not every possible issue. `reference.md` is a starting point, not a destination. If the ca writes a compliant script using it, the format works; if not, adjust.
+
 ## Domain Constraints
 
 - Single-file product (`reference.md`) — all constructs in one document, no splitting
