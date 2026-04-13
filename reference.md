@@ -130,6 +130,37 @@ Further research:
 
 ---
 
+## Section Frame
+
+<!-- Every labeled block in a basher script is framed by two comment rules, never by a Markdown heading. Two widths, one shape, explicit hierarchy. Every later section that refers to "wrapping the block", "the divider", or "the frame" means this. -->
+
+```bash
+# -----------------------------------------------------------------------------
+# LABEL                            ← single-word label OR...
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Goal Purpose                     ← ...short prose + optional detail bullets
+#  * optional detail
+# -----------------------------------------------------------------------------
+
+# ---
+# REQ1                             ← short-rule variant, sub-blocks only
+# ---
+```
+
+Rules:
+- **Full rule** — `# ` + 77 dashes (79 chars total). Frames every top-level section (`VARIABLES`, `FUNCTIONS`, `MAIN`, `REPORT`) and every Goal inside MAIN.
+- **Short rule** — `# ---` (5 chars). Frames sub-blocks *inside* a Goal: each `REQ` divider and the `# fin~` closer.
+- The frame's body is either a single-word label OR a Goal Purpose line with optional `#  * detail` bullets. Nothing else sits between the rules.
+	- *The label is for scanning; the prose form gives the maintainer context about a Goal. The corresponding `print_goal` call addresses the operator — two audiences, two strings; see MAIN.*
+- Two blank lines precede every frame, regardless of width. Content follows the closing rule immediately — no blank line between.
+	- *"Two blanks above, zero blanks below" is the script's only frame-to-content rhythm. One rule covers every frame in the script.*
+- A frame *is* the title. Never add a Markdown heading (`##`, `###`) or prose line above it.
+	- *The script's visual hierarchy is expressed by frames alone. Competing headings would fight it.*
+
+---
+
 ## Shebang
 
 <!-- Without a correct shebang, the script runs under the wrong interpreter, or not at all. -->
@@ -260,10 +291,8 @@ hosts_csv='etc/hosts.csv'
 Rules:
 - One block, near the top, after the header. No late `foo=bar` buried in the main program.
 	- *A single block is the only place you look to change behavior or audit inputs. Debugging with `set -x` then traces every expansion against a known set.*
-- Wrap the block in 79-char `# ---` rules (`# ` + 77 dashes) with a `VARIABLES` label. This is the **top-level section title pattern** — used by every top-level section (`VARIABLES`, `FUNCTIONS`, `MAIN`, `REPORT`) and by Goals inside MAIN. The rule block *is* the section title; there is no prose heading above it.
-	- *The rule block is the script's hardest visual break: "new phase starts here." Nothing else in the script uses that pattern.*
-- Two blank lines precede every top-level rule block; content follows the closing rule immediately, no gap.
-	- *Top-of-hierarchy separator: two blank lines above, no gap below. Sub-blocks (functions, REQs in MAIN) use the same two-blank-lines pattern with a narrower `# ---` marker instead of the full rule.*
+- Frame the block (see Section Frame) with a `VARIABLES` label.
+	- *The frame is the script's hardest visual break: "new phase starts here."*
 - Assert required inputs with `: "${VAR?  message}"`. The script exits immediately if unset.
 	- *Failing at the top with a named variable beats failing 200 lines later with a cryptic unbound-variable error or — worse — silent wrong behavior on an empty expansion.*
 - Group by origin: ENV (external), sourced (shared), local assignments, data pointers. Prune groups not used in this script — `template.sh` carries the full shape for reference.
@@ -307,7 +336,7 @@ render_host() {
 Rules:
 - One block, after Variables, before the main program. Every function defined before it is called.
 	- *Bash resolves function names at call time, but a reader scans top-down. Defining up front means no "where is this defined?" hunts, and no ordering surprises when the main program is rearranged.*
-- Wrap the block in the top-level section title pattern (see Variables) with a `FUNCTIONS` label.
+- Frame the block (see Section Frame) with a `FUNCTIONS` label.
 	- *Consistent visual weight with VARIABLES and MAIN.*
 - Source shared libraries here, not scattered through the script. Annotate what each provides.
 	- *A single `source` site is the only place to look for external symbols. The annotation tells the reader which names entered the namespace without opening the library.*
@@ -331,9 +360,9 @@ Further research:
 <!-- Parsing mechanics are well-documented elsewhere. What basher pins is the happy path — one way to parse short flags, one place it lives in the anatomy, one pattern the operator sees every time. For anything outside the happy path, follow the link. -->
 
 ```bash
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # FUNCTIONS
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Print invocation help.
 usage() {
     cat <<'EOF'
@@ -364,13 +393,13 @@ parse_args() {
 }
 
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # MAIN
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 parse_args "$@"
 
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # …first Goal…
 ```
 
@@ -379,8 +408,8 @@ Rules:
 	- *`while :; do` with `case` handles short flags, long flags, `--key value`, and `--` terminators in a single shape. It reads top-to-bottom, adds cases trivially, and requires no knowledge of `getopts` quirks. `getopts` is a valid alternative for short-flag-only scripts, but the manual loop is the majority case — see BashFAQ/035.*
 - Inside the loop, match `"${1:-}"` (not bare `"$1"`) in the `case` head. With `set -u` active, a bare `$1` fails the moment arguments run out.
 	- *The loop terminates on `*) break` when `$1` is empty or a non-option; the `:-` default lets that match fire cleanly instead of aborting the script.*
-- When a parsing call is present, MAIN takes the full three-line opener (rule / `# MAIN` / rule). `parse_args "$@"` follows the closing rule immediately, then two blank lines separate it from the first Goal's opening rule. When no parsing call is present, MAIN's closer is shared with the first Goal's top rule as usual.
-	- *Parsing is setup, not work; it doesn't belong inside a Goal. Giving MAIN its own three-line frame in this case keeps the invocation visually separated from the narrative that follows.*
+- `parse_args "$@"` is the first executable line after MAIN's closing rule. Placement follows MAIN's two-shape rule: with `parse_args`, MAIN takes its own full three-line frame and two blank lines separate the call from Goal 1.
+	- *Parsing is setup, not work. It doesn't belong inside a Goal. Giving MAIN its own frame here keeps the invocation visually separated from the narrative that follows.*
 - `usage()` prints help to stdout on `-h` and to stderr on a parse error. Exit 0 from `-h`, exit 2 from any parse error.
 	- *Help to stdout can be piped to `less`; errors to stderr stay visible under output redirection. Exit 2 is the POSIX convention for misuse, distinct from `print_error`'s exit 1 for application failure.*
 - Required positional arguments consumed after the loop use `: "${VAR?message}"` assertions — the same pattern the VARIABLES section uses for required inputs.
@@ -398,13 +427,13 @@ Further research:
 <!-- MAIN is where the script does its work. It decomposes into Goals — sequential processing stages, each leaving state for the next — and each Goal decomposes into Requirements. Dividers address the source-reader (maintainer); `print_*` calls address the executor (operator). Two audiences, two strings — never combine them. -->
 
 ```bash
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # MAIN
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Normalize incoming HR records
 #  * drops rows with missing phone numbers
 #  * converts all phones to E.164
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 print_goal 'Normalizing HR records'
 
 
@@ -422,10 +451,10 @@ print_req 'Convert phone numbers to E.164'
 # ... body ...
 
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Emit enriched CSV
 #  * writes to /tmp/hr-out.csv
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 print_goal 'Writing enriched CSV'
 
 
@@ -437,16 +466,18 @@ print_req 'Write normalized records to disk'
 ```
 
 Rules:
-- MAIN uses the top-level section title pattern with the `MAIN` label.
+- MAIN is framed (see Section Frame) with the `MAIN` label.
 - MAIN contains one or more Goals. Each Goal is a sequential processing stage that leaves state for the next.
 	- *Goals support the script's PURPOSE. A single-step script has one Goal; a three-stage pipeline has three.*
-- Goal divider: top-level section title pattern wrapping a short `# Goal Purpose` line and optional `#  * detail` bullets. This block is written **for the maintainer reading the source** — describe what the Goal does, why, and any context the next author will need. Descriptive prose; can expand as context requires.
+- Each Goal is framed (see Section Frame) in the prose-body form — a short `# Goal Purpose` line with optional `#  * detail` bullets. This block is written **for the maintainer reading the source** — describe what the Goal does, why, and any context the next author will need. Descriptive prose; can expand as context requires.
 - Immediately after the closing 79-char rule, call `print_goal '…'`. This message is written **for the operator watching the script run** — the same Goal purpose rendered as a short verb-form announcement (typically `-ing`: "Normalizing HR records", "Writing enriched CSV").
 	- *Two audiences, two strings. The comment block explains; the `print_goal` narrates. Do not collapse them — the maintainer wants context, the operator wants a progress line.*
-- The first Goal's top rule is MAIN's closing rule — one shared line, no gap.
-	- *MAIN's closer already provides the separator; doubling it is wasted weight.*
-- Subsequent Goals have their own opening rule, preceded by two empty lines.
-	- *Top-level-section separator applied between Goals that don't share a boundary with MAIN.*
+- MAIN's opener takes one of two shapes, determined by whether the script parses arguments:
+	- **No `parse_args` call:** MAIN's closing rule is also Goal 1's top rule — one shared line, no gap. The MAIN label block and the first Goal's divider merge into a single five-line frame.
+	- **With a `parse_args` call:** MAIN takes its own full three-line frame. `parse_args "$@"` follows MAIN's closing rule immediately (no blank line). Two blank lines then separate it from Goal 1's own three-line divider.
+	- *The shared-line shape avoids a redundant separator when MAIN's content begins with the first Goal. Inserting `parse_args` breaks that adjacency, so the frames un-share and the normal two-blank sibling separator applies.*
+- Goals after the first always have their own full three-line divider, preceded by two blank lines — regardless of which opener shape MAIN used.
+	- *Between any two Goals, the top-level-section separator applies. The opener-sharing is a one-time economy at MAIN's boundary; it never recurs between Goals.*
 - Each Goal contains one or more REQs — discrete steps the Goal depends on.
 	- *REQs support Goals the way Goals support the PURPOSE.*
 - REQ divider: short three-line form `# --- / # REQN / # ---`. The label is the bare sequential identifier — `REQ1`, `REQ2`, … — nothing else. Never concatenate with a purpose string.
@@ -513,7 +544,7 @@ Further research:
 Rules:
 - REPORT is optional. Include it when the operator would benefit from statistical pass/fail numbers after execution — counts of items processed, succeeded, failed, skipped. Omit it otherwise.
 	- *The trigger is tallies the operator can act on, not merely the existence of outcomes. A script that writes one file produces an outcome but no statistic; a script that processes 400 records and skipped 12 has numbers worth surfacing.*
-- When included, REPORT uses the top-level section title pattern with the bare label `REPORT` — no descriptive purpose line, no detail bullets. Placement: after MAIN, before exit.
+- When included, REPORT is framed (see Section Frame) with the bare label `REPORT` — the label form only; no purpose line, no detail bullets. Placement: after MAIN, before exit.
 	- *Goals carry a unique purpose; REPORT's is always the same — surface execution stats. The `(optional)` qualifier in `template.sh` is meta-info; drop it in actual scripts.*
 - When the summary is multi-line, use the multi-line `printf` pattern covered in Line Width.
 	- *Body format is a rendering concern, already specified. REPORT contributes the section framing only.*
