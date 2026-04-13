@@ -390,6 +390,43 @@ Further research:
 
 ---
 
+## Loops
+
+<!-- Bash has four loop forms; two of them carry nearly all real work. `while read` for unknown-size streams; array iteration for known, bounded inputs. The rest is niche. -->
+
+```bash
+# Stream-process a file line by line for an unknown number of elements
+while IFS= read -r line; do
+    process "$line"
+done < "$input_file"
+
+# Stream-process a command's output (state set inside survives)
+while IFS= read -r cluster; do
+    clusters+=("$cluster")
+done < <(aws eks list-clusters --output text)
+
+# Iterate an array of known number of elements
+for server in "${key_servers[@]}"; do
+    attempt_connect "$server"
+done
+```
+
+Rules:
+- Use `while IFS= read -r line; do …; done < input` when the count is open-ended — a file, a command's output, any stream. This is the first construct to reach for on a big processing job where the number of items is unknown.
+	- *`while read` pulls one record at a time; memory usage is one line regardless of input size. For a command that returns a million rows, this is the only loop form that scales.*
+- Feed a `while read` loop with process substitution (`done < <(cmd)`), not a pipeline (`cmd | while read`). Process substitution keeps the loop in the current shell; the pipeline runs it in a subshell and drops every variable set inside.
+	- *Counters, accumulated arrays, and flags set inside a piped `while read` vanish when the loop exits — the subshell dies and takes its scope with it. The `< <(cmd)` form sidesteps that entirely. See Redirection for the mechanics of `<(cmd)`.*
+- Always `IFS= read -r`. `IFS=` prevents leading/trailing whitespace being stripped; `-r` prevents backslash interpretation.
+	- *`read` defaults to splitting on IFS and processing backslashes — both turn off when feeding records through the loop verbatim. `IFS= read -r` is the shape that preserves the record you were given.*
+- Use `for x in "${arr[@]}"` when the items are a known array that fits in memory.
+	- *`for` reads the whole list into the loop header before iteration starts — fine for a ten-item array, wrong shape for a stream of unknown size.*
+
+Further research:
+1. [BashFAQ/001: How can I read a file line-by-line?](https://mywiki.wooledge.org/BashFAQ/001): exact rationale for `IFS= read -r` and the `< <(cmd)` pattern, with edge cases (final newline, field splitting).
+2. [BashGuide: TestsAndConditionals](https://mywiki.wooledge.org/BashGuide/TestsAndConditionals#Loops): the complete loop family (`for`, `while`, `until`, C-style).
+
+---
+
 ## Functions
 
 <!-- Logic inlined in the main program turns a script into a transcript. Functions named for what they do let the main program read as a sequence of intentions, and let each piece be tested and reused. -->
