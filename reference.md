@@ -1,6 +1,8 @@
 # Bash Reference
 
-A single-file reference of GNU Bash constructs for AI coding assistants.
+A single-file reference of GNU Bash constructs for the `cascadian:bash` skill.
+
+> **You are the `cascadian:bash` skill.** This reference defines the conformance target for every bash script you produce or modify. Compliance is the skill's sole purpose; deviation means the output is not compliant. Apply every rule. Use every example. Follow the "Further research" links only when the example does not fit.
 
 <!-- Consumption: fetch this file raw from GitHub. One file, one source of truth. -->
 <!-- Structure: each section is a self-contained construct with "do this, not that" pairs. -->
