@@ -499,6 +499,32 @@ Further research:
 
 ---
 
+## Temp Files
+
+<!-- Scripts that create temp artifacts are promises to the operator: /tmp stays clean, even when the script aborts. `mktemp` names the file safely; `trap … EXIT` removes it on every exit path. The pair is also a first-class security construct — when secret or sensitive material needs to exist for a moment, serve its purpose, and disappear, this is the shape. -->
+
+```bash
+# Create a named temp dir; trap it for cleanup
+tmp_dir="$(mktemp -d /tmp/my_script-XXXXXX)"
+trap 'rm -rf "$tmp_dir"' EXIT
+
+work_on "$tmp_dir/input.csv"
+```
+
+Rules:
+- Use `mktemp -d /tmp/name-XXXXXX` for temp dirs, `mktemp /tmp/name-XXXXXX` for tempfiles. Include a project-identifiable prefix.
+	- *The `XXXXXX` is not literal — mktemp replaces it with random characters and returns a guaranteed-unique path. A project prefix (`my_script-`, `deploy-`) makes tempfiles traceable when `/tmp` fills.*
+- Pair every `mktemp` with `trap 'rm -rf "$path"' EXIT`. Set the trap immediately after the mktemp line, before any work.
+	- *The EXIT trap fires on success, failure, error, and ctrl-C alike. Setting it at the top (not at the end of main) means every abort path cleans up — including the error the script doesn't know about yet. For sensitive material, that discipline is the difference between "exists for a moment" and "leaks on crash."*
+- Do not hand-roll temp paths. `/tmp/$$.tmp`, `/tmp/script.log`, or any literal fixed name is a race condition waiting to happen.
+	- *A literal name collides between concurrent invocations; `$$` collides when PIDs wrap. mktemp is the one right answer.*
+
+Further research:
+1. [`man mktemp`](https://man7.org/linux/man-pages/man1/mktemp.1.html) — template syntax, `-d`, `-u`, `-q` flags, TMPDIR.
+2. [BashFAQ/062](https://mywiki.wooledge.org/BashFAQ/062) — safe temp-file creation, security pitfalls, fallbacks when mktemp isn't available.
+
+---
+
 ## Functions
 
 <!-- Logic inlined in the main program turns a script into a transcript. Functions named for what they do let the main program read as a sequence of intentions, and let each piece be tested and reused. -->
