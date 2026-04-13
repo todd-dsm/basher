@@ -38,6 +38,7 @@ Evidence of activities performed during basher development (ISO/IEC/IEEE 15289:2
 - `reference.md` §Loops — new section; `while IFS= read -r` first (unknown-size streams), `< <(cmd)` process-substitution pairing to preserve loop-body scope, `for x in "${arr[@]}"` last (known bounded arrays); cites BashFAQ/001 and BashGuide/TestsAndConditionals
 - `reference.md` §Redirection: added UUOC rule (`cmd <file` instead of `cat file | cmd`)
 - `reference.md` §External Tools — new section (DO/DON'T format) covering `find -exec {} +` vs `\;`, `-print0 | xargs -0` null-safety, curl `-fsSL` flag set, download-and-extract pipe to tar; macOS Darwin `-exec +` early-exit caveat; cites wooledge UsingFind §7, BashFAQ/119, curl manpage
+- `reference.md` §Pipelines — new section naming the distinctive idioms: leading-pipe continuation, `| tee` invocation convention, `yes | cmd` batch-confirm, `grep "[x]foo"` self-exclusion trick, `curl | bash` vendor-installer caveat; dry-run note for `xargs kill`; cites GNU Bash manual Pipelines, man tee/yes/pgrep
 
 ---
 
