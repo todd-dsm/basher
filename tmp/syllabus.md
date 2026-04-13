@@ -2,65 +2,67 @@
 
 Constructs to cover in `reference.md`. Move items from here into `reference.md` as each section is written. When this file is empty, the reference is complete.
 
+`NA:` prefix = the calling agent already knows the mechanics and basher has no style guidance to add. Left in place as a ledger of what was considered and consciously skipped.
+
 ## Preamble
 - [x] Shebang
 - [x] Strict mode (`set -euo pipefail`, IFS)
 - [x] Script header
 
 ## Variables & Data
-- [ ] Variable declaration (naming, `local`, `readonly`, `declare`)
+- [ ] NA: Variable declaration (naming, `local`, `readonly`, `declare`) — covered in Variables + Functions
 - [x] Quoting (single vs double vs escaped)
-- [ ] Parameter expansion (`${var:-default}`, `${var%pattern}`, etc.)
-- [ ] Command substitution (`$(...)` vs backticks)
-- [ ] Arithmetic (`$(( ))`, `(( ))`)
+- [ ] NA: Parameter expansion (`${var:-default}`, `${var%pattern}`, etc.)
+- [ ] NA: Command substitution (`$(...)` vs backticks)
+- [ ] NA: Arithmetic (`$(( ))`, `(( ))`)
 
 ## Conditionals
-- [ ] Test constructs (`[[ ]]` vs `[ ]` vs `test`)
-- [ ] File tests (`-f`, `-d`, `-r`, etc.)
-- [ ] String comparison
-- [ ] Numeric comparison
-- [ ] if / elif / else
-- [ ] case
+- [ ] NA: Test constructs (`[[ ]]` vs `[ ]` vs `test`)
+- [ ] NA: File tests (`-f`, `-d`, `-r`, etc.)
+- [ ] NA: String comparison
+- [ ] NA: Numeric comparison
+- [ ] NA: if / elif / else — style covered in Checks
+- [ ] NA: case
 
 ## Loops
-- [ ] for (C-style, list iteration, range)
-- [ ] while / until
-- [ ] Read loops (`while IFS= read -r`)
+- [ ] NA: for (C-style, list iteration, range)
+- [ ] NA: while / until
+- [ ] NA: Read loops (`while IFS= read -r`)
 
 ## Collections
-- [ ] Indexed arrays
-- [ ] Associative arrays
+- [ ] NA: Indexed arrays — quoting already covered `"${arr[@]}"`
+- [ ] NA: Associative arrays
 
 ## Functions
-- [ ] Function declaration
-- [ ] Arguments and `$@` vs `$*`
-- [ ] Return values and exit status
-- [ ] Local scope
+- [ ] NA: Function declaration — covered in Functions
+- [ ] NA: Arguments and `$@` vs `$*`
+- [ ] NA: Return values and exit status — covered in Functions
+- [ ] NA: Local scope — covered in Functions
 
 ## I/O
-- [ ] Redirection (`>`, `>>`, `<`, `2>&1`)
-- [ ] Pipes
-- [ ] Heredocs & herestrings
-- [ ] Process substitution (`<(...)`, `>(...)`)
-- [ ] printf vs echo
+- [ ] NA: Redirection (`>`, `>>`, `<`, `2>&1`)
+- [ ] NA: Pipes — pipefail covered in Error Mode
+- [ ] NA: Heredocs & herestrings — heredoc covered in Line Width
+- [ ] NA: Process substitution (`<(...)`, `>(...)`)
+- [ ] NA: printf vs echo — reference consistently uses printf
 
 ## Expansion & Globbing
-- [ ] Brace expansion
-- [ ] Pathname expansion / globs
-- [ ] Word splitting (and how to prevent it)
+- [ ] NA: Brace expansion
+- [ ] NA: Pathname expansion / globs — covered by Quoting
+- [ ] NA: Word splitting (and how to prevent it) — covered by Quoting
 
 ## Error Handling
-- [ ] Exit codes (`$?`, meaningful exit codes)
-- [ ] trap (EXIT, ERR, signals)
-- [ ] Error propagation (pipefail nuances)
+- [ ] NA: Exit codes (`$?`, meaningful exit codes)
+- [ ] NA: trap (EXIT, ERR, signals) — revisit if a real script makes placement unclear
+- [ ] NA: Error propagation (pipefail nuances)
 
 ## Script Interface
-- [ ] Argument parsing (`getopts`, positional params)
-- [ ] Usage / help output
-- [ ] Environment variables
+- [x] Argument parsing (`getopts`, positional params)
+- [x] Usage / help output
+- [ ] NA: Environment variables — covered in Variables (ENV group)
 
 ## Advanced
-- [ ] Subshells vs command grouping (`( )` vs `{ }`)
-- [ ] Here-strings for safe input
-- [ ] Signal handling
-- [ ] ShellCheck-driven discipline
+- [ ] NA: Subshells vs command grouping (`( )` vs `{ }`)
+- [ ] NA: Here-strings for safe input
+- [ ] NA: Signal handling — see trap
+- [ ] NA: ShellCheck-driven discipline — covered in Script Header + docs/readme

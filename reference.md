@@ -326,6 +326,73 @@ Further research:
 
 ---
 
+## Argument Parsing
+
+<!-- Parsing mechanics are well-documented elsewhere. What basher pins is the happy path — one way to parse short flags, one place it lives in the anatomy, one pattern the operator sees every time. For anything outside the happy path, follow the link. -->
+
+```bash
+# ---------------------------------------------------------------------------
+# FUNCTIONS
+# ---------------------------------------------------------------------------
+# Print invocation help.
+usage() {
+    cat <<'EOF'
+Usage: scripts/name-of-script.sh [-hv] [-o OUT] INPUT
+
+  -h, --help         show this help
+  -v, --verbose      verbose output
+  -o, --output OUT   output directory (default: /tmp)
+  INPUT              path to input file
+EOF
+}
+
+# Parse flags and positional args; populate script-wide vars.
+parse_args() {
+    while :; do
+        case "${1:-}" in
+            -h|--help)    usage; exit 0 ;;
+            -v|--verbose) verbose=true ;;
+            -o|--output)  output_dir="$2"; shift ;;
+            --)           shift; break ;;
+            -?*)          usage >&2; exit 2 ;;
+            *)            break ;;
+        esac
+        shift
+    done
+    : "${1?missing input file; see -h}"
+    input_file="$1"
+}
+
+
+# ---------------------------------------------------------------------------
+# MAIN
+# ---------------------------------------------------------------------------
+parse_args "$@"
+
+
+# ---------------------------------------------------------------------------
+# …first Goal…
+```
+
+Rules:
+- The happy path for scripts that accept flags is a `while :; do / case "$1" in … esac; shift; done` loop. Wrap it in a `parse_args()` function defined in FUNCTIONS, alongside a `usage()` helper. Call `parse_args "$@"` as the first executable line of MAIN.
+	- *`while :; do` with `case` handles short flags, long flags, `--key value`, and `--` terminators in a single shape. It reads top-to-bottom, adds cases trivially, and requires no knowledge of `getopts` quirks. `getopts` is a valid alternative for short-flag-only scripts, but the manual loop is the majority case — see BashFAQ/035.*
+- Inside the loop, match `"${1:-}"` (not bare `"$1"`) in the `case` head. With `set -u` active, a bare `$1` fails the moment arguments run out.
+	- *The loop terminates on `*) break` when `$1` is empty or a non-option; the `:-` default lets that match fire cleanly instead of aborting the script.*
+- When a parsing call is present, MAIN takes the full three-line opener (rule / `# MAIN` / rule). `parse_args "$@"` follows the closing rule immediately, then two blank lines separate it from the first Goal's opening rule. When no parsing call is present, MAIN's closer is shared with the first Goal's top rule as usual.
+	- *Parsing is setup, not work; it doesn't belong inside a Goal. Giving MAIN its own three-line frame in this case keeps the invocation visually separated from the narrative that follows.*
+- `usage()` prints help to stdout on `-h` and to stderr on a parse error. Exit 0 from `-h`, exit 2 from any parse error.
+	- *Help to stdout can be piped to `less`; errors to stderr stay visible under output redirection. Exit 2 is the POSIX convention for misuse, distinct from `print_error`'s exit 1 for application failure.*
+- Required positional arguments consumed after the loop use `: "${VAR?message}"` assertions — the same pattern the VARIABLES section uses for required inputs.
+	- *One assertion style across the whole script. The operator sees the same shape of error whether the missing input was a flag, an env var, or a positional arg.*
+
+Further research:
+1. [BashFAQ/035: Handling command-line arguments](https://mywiki.wooledge.org/BashFAQ/035): the authoritative reference — when `getopts` is enough, when to parse manually, and the trade-offs of each approach. Consult before deviating from the happy path above.
+2. [ComplexOptionParsing](https://mywiki.wooledge.org/ComplexOptionParsing): extended patterns for when the happy path runs out — bundled short flags (`-xvf`), `--key=value` forms, option-argument tight-coupling, and other edge cases.
+3. [argbash](https://argbash.io/): the Wooledge authors' recommended generator for non-trivial parsers. Writes the `while :; do / case` loop, usage text, and validation for you from a concise spec. Reach for it when the hand-written loop would be longer than the rest of the script.
+
+---
+
 ## Main
 
 <!-- MAIN is where the script does its work. It decomposes into Goals — sequential processing stages, each leaving state for the next — and each Goal decomposes into Requirements. Dividers address the source-reader (maintainer); `print_*` calls address the executor (operator). Two audiences, two strings — never combine them. -->
