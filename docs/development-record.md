@@ -35,6 +35,7 @@ Evidence of activities performed during basher development (ISO/IEC/IEEE 15289:2
 ### Added (corpus recon, continued)
 - `reference.md` §Parameter Expansion — new section teaching the CA the concept and pointing at wooledge BashGuide/BashFAQ (default, prefix/suffix strip, arithmetic examples; "don't improvise beyond the shapes shown")
 - `reference.md` §Redirection — new section covering silence (`>/dev/null 2>&1`, not `&>`), envsubst templating, heredocs (quoted vs unquoted delimiter), herestring, process substitution; cites unix.SE/a/119650 and BashGuide/InputAndOutput
+- `reference.md` §Loops — new section; `while IFS= read -r` first (unknown-size streams), `< <(cmd)` process-substitution pairing to preserve loop-body scope, `for x in "${arr[@]}"` last (known bounded arrays); cites BashFAQ/001 and BashGuide/TestsAndConditionals
 
 ---
 
