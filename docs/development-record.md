@@ -29,6 +29,12 @@ Evidence of activities performed during basher development (ISO/IEC/IEEE 15289:2
 
 ### Changed (corpus recon)
 - `reference.md` §Variables casing rule: tightened to `snake_case` for locals + `UPPER_CASE` for exports/constants; `camelCase` explicitly retired (snake_case is the UNIX convention; matches tool-surface consistency)
+- `reference.md` §Functions: added function-form rule retiring the `function` keyword (POSIX `name() {` form only)
+- `reference.md` §Starter Kit: removed `scripts/template.sh` from the promise (template is constructed per project from the reference; printer.func is the only shipped artifact)
+
+### Added (corpus recon, continued)
+- `reference.md` §Parameter Expansion — new section teaching the CA the concept and pointing at wooledge BashGuide/BashFAQ (default, prefix/suffix strip, arithmetic examples; "don't improvise beyond the shapes shown")
+- `reference.md` §Redirection — new section covering silence (`>/dev/null 2>&1`, not `&>`), envsubst templating, heredocs (quoted vs unquoted delimiter), herestring, process substitution; cites unix.SE/a/119650 and BashGuide/InputAndOutput
 
 ---
 
