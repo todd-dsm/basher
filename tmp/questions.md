@@ -66,7 +66,17 @@ These are restatements of reference rules, not explanations of code.
 
 ---
 
-## Q4 — Argument parsing fails when flags follow positionals
+## Q4 — Argument parsing fails when flags follow positionals (RESOLVED 2026-04-13 — mark for retest)
+
+**Resolution:** Three rules added to §Argument Parsing — Terms (flag vs positional vocabulary), Flags-precede-positionals (matches wooledge BashFAQ/035's explicit recommendation), and Validate flag-value presence (adopts wooledge's guard pattern, adapted to basher style with `print_error`). Example block updated to show the guarded flag-value form. BashFAQ/035's `"options appear before non-option arguments"` cited as the authoritative source.
+
+**Mark for retest.** The next pressure-test cycle should verify that a CA following these rules produces a script where:
+- Flags-after-positionals would be caught either by the operator following EXECUTE, or surfaced loudly rather than silently ignored.
+- A flag with missing value fails loudly with a named error before the script reaches the affected command.
+
+---
+
+### Original write-up
 
 **Surfaced in:** test-c (run 1 with `script.sh target spec -a ANCHOR` exited with `sed: no previous regular expression`), test-d (same — `--pattern` after positionals ignored)
 
@@ -80,6 +90,8 @@ The CAs accept this as compliant behavior — they produced the standard loop. U
 - **(c)** Add a validation call after `parse_args` that asserts no leftover tokens look like flags — `[[ "$1" == -* ]] && { usage >&2; exit 2; }`.
 
 **Recommendation pending.** (a) is cheapest and most consistent with the reference's "one happy path, documented" ethos.
+
+
 
 ---
 

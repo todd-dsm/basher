@@ -597,7 +597,10 @@ parse_args() {
         case "${1:-}" in
             -h|--help)    usage; exit 0 ;;
             -v|--verbose) verbose=true ;;
-            -o|--output)  output_dir="$2"; shift ;;
+            -o|--output)
+                [[ "${2:-}" ]] || print_error '--output requires a value'
+                output_dir="$2"; shift
+                ;;
             --)           shift; break ;;
             -?*)          usage >&2; exit 2 ;;
             *)            break ;;
@@ -620,6 +623,11 @@ parse_args "$@"
 ```
 
 Rules:
+- **Terms.** A **flag** (option) is a token starting with `-` or `--` — `-v`, `--verbose`, `-o OUT`. A **positional** is a token that does not start with `-`, read by its order in `$@` (first is `$1`, second `$2`, …). The delimiter `--` ends option parsing; any token after it is positional even if it begins with `-`. A bare `-` is the conventional stdin filename (see the stdin rule below).
+- **Flags precede positionals.** The parse loop breaks on the first non-option token, so flags that appear *after* a positional are silently ignored. Reflect this in the EXECUTE header line: write the invocation as `scripts/name.sh [-hv] [-o OUT] INPUT` — flags first, positionals last.
+	- *The loop is linear by design: no backtracking, no state, no ambiguity. Intermixed flags-and-positionals is a feature of richer parsers (getopts with reordering, argbash); the reference's happy path trades that flexibility for predictability. "Flags first" is the operator contract, and it matches wooledge's recommended pattern.*
+- **Validate flag-value presence.** A flag that consumes a value must guard that the value exists before assigning. Use `[[ "${2:-}" ]] || print_error '<flag> requires a value'` as the first line of the case branch.
+	- *Without the guard, `--output` followed by nothing silently sets the variable to empty, and the script fails obscurely when it's used. The guard fails loudly at the parse stage with a named flag in the message. `print_error` + `return 1` propagates through `set -e`; no extra exit needed.*
 - The happy path for scripts that accept flags is a `while :; do / case "$1" in … esac; shift; done` loop. Wrap it in a `parse_args()` function defined in FUNCTIONS, alongside a `usage()` helper. Call `parse_args "$@"` as the first executable line of MAIN.
 	- *`while :; do` with `case` handles short flags, long flags, `--key value`, and `--` terminators in a single shape. It reads top-to-bottom, adds cases trivially, and requires no knowledge of `getopts` quirks.*
 - Inside the loop, match `"${1:-}"` (not bare `"$1"`) in the `case` head. With `set -u` active, a bare `$1` fails the moment arguments run out.
