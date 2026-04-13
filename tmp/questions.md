@@ -21,7 +21,13 @@ Questions surfaced during the 2026-04-13 pressure-test session. Each is a case w
 
 ---
 
-## Q2 — Printer path: reference vs. actual file location
+## Q2 — Printer path: reference vs. actual file location (RESOLVED 2026-04-13)
+
+**Resolution:** Printer-file placement is an implementation detail, therefore CA territory. `docs/skill-contract.md` names it as C2 (target path), C3 (source line), and S1 (the CA's copy operation). reference.md needs no changes — it states what a compliant script sources; the CA handles getting the file there. Clean dividing line held.
+
+---
+
+### Original write-up
 
 **Surfaced in:** test-c (`script.sh:12-20`), test-d (`script.sh:40`)
 
