@@ -13,13 +13,11 @@ If the example does not meet your requirements, consult the section's "Further r
 
 ## Starter Kit
 
-<!-- basher ships two paired artifacts at canonical paths. Every compliant script presumes both. -->
+<!-- basher ships one canonical artifact. Every compliant script presumes it. -->
 
 Rules:
-- The starter kit is two files at fixed paths under `scripts/`:
-	- `scripts/template.sh` — the complete, annotated script anatomy.
-	- `scripts/lib/printer.func` — shared output helpers: `print_goal`, `print_req`, `print_pass`, `print_error`.
-	- *Two files, one unit. The template sources the printer; the printer's helpers drive every script's visible output.*
+- The starter kit is one file at a fixed target path: `scripts/lib/printer.func` — shared output helpers: `print_goal`, `print_req`, `print_pass`, `print_error`.
+	- *The printer's helpers drive every compliant script's visible output. The script anatomy itself is constructed per project by following this reference; the printer is passed whole.*
 - Every compliant script sources the printer: `source scripts/lib/printer.func`.
 	- *The Main-program conventions (announcing goals, reporting pass/fail) presuppose these helpers. A script that doesn't source them exits the scope of this reference.*
 
@@ -313,6 +311,85 @@ Further research:
 
 ---
 
+## Parameter Expansion
+
+<!-- Parameter expansion is bash's in-shell value surgery: default values, prefix/suffix strip, length, replace. Knowing it exists saves a fork to `basename`, `dirname`, `expr`, or `sed`, and produces correct-by-construction code for missing-value handling. -->
+
+```bash
+# Default when unset (fallback without branching)
+vault_addr="${VAULT_ADDR:-https://localhost:8200}"
+
+# Basename / dirname without forking
+script_name="${0##*/}"            # strip longest prefix ending in /
+script_dir="${0%/*}"               # strip shortest suffix starting with /
+
+# Integer arithmetic
+count=$((retries + 1))
+```
+
+Rules:
+- Reach for parameter expansion before forking an external tool. `${path##*/}` replaces `$(basename "$path")` with no process spawn.
+	- *Every `$(cmd)` is a subshell; shell-internal expansion is free. On a loop of 10,000 paths that's real time. On a one-shot it's still the clearer form once you know it.*
+- Use `${var:-default}` for fallback, `${var:?message}` for required. Do not write `if [[ -z "$var" ]]; then var=default; fi`.
+	- *The expansion form is atomic — no chance to branch wrong, no extra lines. `${var:?message}` exits the script with the named message; the canonical placement is the top of the script (see Variables).*
+- Do not improvise expansions beyond the shapes shown. The operator set is large and subtle (`#` vs `##`, `%` vs `%%`, `:-` vs `-`, `/` vs `//`) — when a case doesn't fit the examples, consult the references rather than guess.
+	- *This mirrors the top-of-file consumption rule: use the example; follow the link if it doesn't fit; don't invent.*
+
+Further research:
+1. [BashGuide: Parameters — Parameter Expansion](https://mywiki.wooledge.org/BashGuide/Parameters#Parameter_Expansion): the complete operator set with examples.
+2. [BashFAQ/073](https://mywiki.wooledge.org/BashFAQ/073): parameter-expansion cheat sheet.
+
+---
+
+## Redirection
+
+<!-- Bash's redirection operators are expressive and easy to misread. Favor the explicit form over the shorter one — a reader who can pronounce the operators can debug them. -->
+
+```bash
+# Silence a command's output and errors
+cmd >/dev/null 2>&1
+
+# Expand template variables into a file
+envsubst <"$template" >"$output"
+
+# Write a config; body interpolates variables
+cat <<EOF >/etc/app.conf
+port=$port
+log_dir=$log_dir
+EOF
+
+# Embed a literal block; no expansion
+cat <<'EOF' >scripts/install.sh
+#!/usr/bin/env bash
+printf 'hello from $USER\n'
+EOF
+
+# Feed one string to stdin (split a line)
+read -r first _ <<< "$line"
+
+# Treat a command's output as a file argument
+diff <(sort a.txt) <(sort b.txt)
+```
+
+Rules:
+- Silence a command with `>/dev/null 2>&1`. Do not use `&>/dev/null`.
+	- *`>/dev/null` redirects stdout; `2>&1` points stderr at the same place. Two operators, two intents, in the order they happen. `&>` collapses both into one symbol that reads as "background-redirect" at a glance — shorter, less clear. Favor the form a reader can pronounce. Reach for this only to quiet a misbehaving tool that writes to the wrong stream; real errors are handled, not hidden.*
+- Expand template variables into a file with `envsubst <template >output`. Do not pipe through `cat`.
+	- *envsubst substitutes exported `$VAR` references in the input, leaving other text literal — a compact templating idiom. The `cat <tmpl | envsubst >out` form spawns a useless process.*
+- Heredocs: unquoted delimiter (`<<EOF`) interpolates the body; quoted delimiter (`<<'EOF'`) treats it as literal. Quote whenever the body contains `$`, backticks, or `\` that should pass through unchanged.
+	- *The unquoted form is a reader-trap: `$PATH` in the body becomes the caller's `PATH`, not the literal string. When writing a script-into-a-script or embedding config with shell-looking syntax, quote the delimiter.*
+- Herestring `<<<` feeds a single string to a command's stdin — most often paired with `read` to split a line into fields. See the reference for the full shape.
+	- *A compact alternative to `echo "$line" | read …` — and unlike the pipe form, it does not spawn a subshell, so variables set by `read` stay in scope.*
+- Process substitution `<(cmd)` lets a tool that expects a filename argument read a command's output instead. Bash materializes a `/dev/fd/N` handle; the consumer reads it as a file.
+	- *The canonical use is diffing two streams — `diff <(sort a) <(sort b)` — without creating tempfiles. Useful anywhere a tool refuses pipes but accepts files.*
+
+Further research:
+1. [unix.SE: redirecting to /dev/null](https://unix.stackexchange.com/a/119650): walks through each operator explicitly; recommends writing it out over shortened forms.
+2. [BashGuide: InputAndOutput](https://mywiki.wooledge.org/BashGuide/InputAndOutput): full redirection operator set, heredocs, herestrings, process substitution.
+3. [GNU gettext: envsubst](https://www.gnu.org/software/gettext/manual/html_node/envsubst-Invocation.html): envsubst invocation, including the `'$VAR1 $VAR2'` explicit-list form.
+
+---
+
 ## Functions
 
 <!-- Logic inlined in the main program turns a script into a transcript. Functions named for what they do let the main program read as a sequence of intentions, and let each piece be tested and reused. -->
@@ -346,6 +423,8 @@ Rules:
 	- *A single `source` site is the only place to look for external symbols. The one-line shape keeps the annotation scannable; the listed names tell the reader what entered the namespace without opening the library.*
 - One purpose per function. Name `verb_noun`, lowercase, underscores.
 	- *Functions that do one thing are testable in isolation. `verb_noun` reads as intent in the main program: `check_input "$file"` needs no further explanation.*
+- Define with `name() {`. Never `function name {` or `function name() {`.
+	- *Two forms for the same thing is noise. Pick the shorter one and stay with it — consistent across the script, consistent across the codebase.*
 - Separate each function from the next with two blank lines followed by a comment block. The function's purpose comment is that comment block.
 	- *One blank line separates logic inside a function. Two blank lines + a comment is the sibling-block separator used everywhere below the top-level rules — between functions here, between requirements in MAIN.*
 - Declare locals with `local`. Return status with `return N`; return values via stdout.
