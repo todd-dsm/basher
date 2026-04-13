@@ -33,7 +33,7 @@ Rules:
 - All relative paths inside a script — `source` targets, data file references, log output paths — are paths from the repo root.
 	- *Bash resolves relative paths against the invoking shell's CWD, not the script's file location. With a single anchor (the repo root), `source scripts/lib/printer.func` reads the same from every script and every invocation.*
 - Do not use `$(dirname "$0")`, `$BASH_SOURCE`-based CWD computation, or `cd` prologues to find or change the script's working directory.
-	- *Each is a workaround for a convention that isn't being held. With the convention in place, they add ceremony and nothing else — and each has its own edge cases (symlinks, sourced scripts, `$0` lies) that the convention avoids entirely.*
+	- *Unneeded when the CWD convention holds; each has its own edge cases (symlinks, sourced scripts, `$0` lies).*
 
 Further research:
 1. [BashFAQ/028: Script location](https://mywiki.wooledge.org/BashFAQ/028): why `$0` and `$(dirname "$0")` are unreliable, and why a CWD convention is the stable answer.
@@ -48,7 +48,6 @@ Rules:
 - Every line is exactly 79 characters or shorter — never 80, never longer. Code, comments, output, section rules, and `# ---` markers all obey the same hard limit.
 	- *The constraint is the worst plausible terminal, not the author's. 79 is the number because section rules are 79 and every other line lives inside that frame. One wrap-imposed line break destroys alignment, indentation, and the reader's ability to scan.*
 - When a single statement or message cannot fit, break it into a multi-line construct rather than letting the terminal wrap it.
-	- *An author-controlled break is deliberate. A terminal-imposed wrap is noise.*
 - When multi-line output is needed (reports, summaries, banners), a multi-line `printf` is the default form. Preserve the shape of the rendered output in the source.
 	- *What you write is what the reader sees. Collapsing a shaped report into a single 200-char line trades readability in the source for readability nowhere.*
 - Reach for a heredoc (`cat <<EOF` / `<<'EOF'`) when the block is large static text, embeds literal `$` or backticks, or feeds another command's stdin. Not every multi-line case is a heredoc case.
@@ -84,7 +83,6 @@ Further research:
 
 Rules:
 - basher scripts use 4-space indentation. Always. Every committed artifact — template, examples, produced scripts — indents with four spaces. No tabs, no two-space, no eight-space, no mixing.
-	- *This is the rule, not a default. Agents producing new scripts emit 4 spaces and nothing else. "Default" implies an alternative; there is none inside basher.*
 - When editing a **foreign script** that uses a different convention, match what's there — do not retab as a side effect. A script is foreign iff it was neither produced from a basher template nor lives inside a repository that declares basher as its standard. Anything else is a basher artifact and takes 4 spaces.
 	- *The author of a foreign script has the right to their own convention. Changing it silently pollutes the diff. The concrete definition of "foreign" closes the loophole of claiming any inherited script is exempt.*
 - Within any one script, one depth and one whitespace choice, applied consistently.
@@ -118,7 +116,7 @@ Rules:
 - The only exception: when word-splitting or globbing is the explicit purpose of the expansion. An unquoted `for f in *.log` invokes pathname expansion on purpose. An unquoted `cmd $pre_built_args` splits a pre-built argument string on purpose — but when emitting new code, prefer an array: `cmd "${args[@]}"`. The pre-built-string form is a pattern you may encounter in legacy code; it is not one to produce.
 	- *The carve-out is narrow: if the expansion would do exactly the right thing quoted, quote it. Reach for the unquoted form only when the splitting or globbing is the point — and for argument lists, an array is always the right shape in new code.*
 - Prefer single quotes for literal strings. Use double quotes only when expansion is intended.
-	- *Single quotes suppress `$`, backticks, and `\` — less to audit. Upgrading to double quotes the moment a `$` appears inside is lighter than remembering which expansions a double-quoted literal will interpret.*
+	- *Single quotes suppress `$`, backticks, and `\`. Upgrade to double only when expansion is actually needed.*
 - Brace the name when the expansion is adjacent to word characters, a digit, or a parameter operator (`"${file}_backup"`, `"${arch##*-}"`). Use `"$var"` when the reference stands alone.
 	- *The brace is what ends the name. Without it, `$file_backup` reads as a different variable. The cost of always-brace on adjacency is two characters; the cost of forgetting is a silent bug.*
 - Arrays expand as `"${arr[@]}"`. Never `${arr[@]}`, `${arr[*]}`, or `"${arr[*]}"` — each is subtly different and almost never what you want.
@@ -157,9 +155,7 @@ Rules:
 - The frame's body is either a single-word label OR a Goal Purpose line with optional `#  * detail` bullets. Nothing else sits between the rules.
 	- *The label is for scanning; the prose form gives the maintainer context about a Goal. The corresponding `print_goal` call addresses the operator — two audiences, two strings; see MAIN.*
 - Two **blank lines** precede every frame, regardless of width. Content follows the closing rule immediately — no blank line between. A blank line is `^$` — a line with no characters, not a whitespace-only line.
-	- *"Two blanks above, zero blanks below" is the script's only frame-to-content rhythm. One rule covers every frame in the script.*
 - A frame *is* the title. Never add a Markdown heading (`##`, `###`) or prose line above it.
-	- *The script's visual hierarchy is expressed by frames alone. Competing headings would fight it.*
 
 ---
 
@@ -216,7 +212,7 @@ Rules:
 	- *A real `disable=none` is a parse error (SC1073). The only clean state is an empty slot. Running ShellCheck on the finished script is the trigger for adding a directive.*
 - `PURPOSE` is one line. Name the action, not the implementation.
 	- *Readers scan PURPOSE to decide if this is the script they want. Long prose defeats scanning.*
-- `PREREQS` lists every resource the script needs to run properly. The test is functional: if the script won't run properly without it, it's a prerequisite. Common categories include installed tools, environment variables, credentials and tokens (e.g., a HashiCorp Vault token, AWS/GCP credentials, SSH keys), permissions (sudo, group membership, file mode), network access to specific hosts or services, required input files and their formats, and existing filesystem state — but the test is the rule, not the list. Write `none` only when the script truly requires nothing beyond a working bash shell. Do not remove the block.
+- `PREREQS` lists every resource the script needs to run properly. Functional test: if the script won't run properly without it, list it. Write `none` only when truly none. Do not remove the block.
 	- *A script that silently assumes `jq` is installed or a Vault token is present fails mysteriously. The functional test captures every such dependency, whether or not it fits a named category.*
 - `EXECUTE` shows the exact invocation: `scripts/name-of-script.sh` followed by any arguments the script accepts. Nothing else — no inline comments, no commentary, no CWD reminders. The Invocation rule already fixes the CWD; repeating it here is noise.
 	- *Copy-pasteable usage prevents misuse. "How do I run this?" should never be a question.*
@@ -229,7 +225,7 @@ Further research:
 
 ## Error Mode
 
-<!-- Bash's defaults are lenient: unset variables expand to empty strings, failed commands keep running, broken pipelines return success. A production script turns all three off on line one of its body. Placing the flag line immediately under the header — before anything else executes — makes it the earliest point where behavior could have diverged, and puts it one character away from the debugger's reach. -->
+<!-- Bash's defaults are lenient: unset variables expand to empty, failed commands keep running, broken pipelines return success. Turn all three off on line one. -->
 
 ```bash
 #!/usr/bin/env bash
@@ -247,8 +243,6 @@ Rules:
 	- *First executable line means the flags govern the entire script body. No blank above means the line rides with the header as a single opening unit — shebang, header, mode. The reader sees the script's operating posture in one uninterrupted block.*
 - Sourced libraries (`*.func` files) **omit this line**. Shell options set inside a sourced file persist in the caller's shell — a library that runs `set -euo pipefail` silently changes the error-handling posture of every script that sources it. Libraries define functions and return; the caller picks its own error mode.
 	- *Execution runs in a child shell and the flags die with it; sourcing runs in the caller's shell and the flags stay. Libraries must not leak behavior the caller didn't opt into.*
-- Two blank lines separate `set -euo pipefail` from the VARIABLES section that follows — the same separator used before every top-level rule block.
-	- *No carve-out below the error-mode stanza. The zero-blank rule above it (so the line rides with the header) is the one exception; everything below obeys the standard two-blank separator. "Two blanks means new section starts here," everywhere after the opener.*
 - Keep all three flags together, in the order `-euo pipefail`. Do not split them across multiple `set` calls.
 	- *One line is easier to read, easier to edit, and keeps the three behaviors visible as a set rather than scattered decisions.*
 - For debugging, add `x`: `set -euxo pipefail`. Remove it when debugging is done.
@@ -300,7 +294,7 @@ Rules:
 - Group by origin: ENV (external), sourced (shared), local assignments, data pointers. Prune groups not used in this script — `template.sh` carries the full shape for reference.
 	- *The shape of the groups tells the next reader what the script depends on at a glance. A pruned script shows only real dependencies; nothing to mistake for a forgotten slot.*
 - Name local assignments `snake_case`. Reserve `UPPER_CASE` for exports and script-level constants. No `camelCase`.
-	- *`snake_case` is the UNIX convention — every system tool, every man page, every config uses it. A script that mixes `maxRetries` with `/etc/max_retries.conf` adds friction for no gain. Consistent case also makes `set -x` output scannable.*
+	- *`snake_case` matches UNIX convention and keeps `set -x` output scannable.*
 - Quote string values; leave bare booleans and bare integers unquoted. Numbers formatted for display (commas, units) are strings — quote them.
 	- *Quoting tracks semantics: a string you'll pass around and print is quoted; a scalar you'll compute with is not. `region='us-west-2'` is a string; `port=8080` is an integer; `threshold='1,000,000'` is a formatted string that happens to look numeric. Single vs. double quote choice is covered in the Quoting section.*
 
@@ -332,8 +326,6 @@ Rules:
 	- *Every `$(cmd)` is a subshell; shell-internal expansion is free. On a loop of 10,000 paths that's real time. On a one-shot it's still the clearer form once you know it.*
 - Use `${var:-default}` for fallback, `${var:?message}` for required. Do not write `if [[ -z "$var" ]]; then var=default; fi`.
 	- *The expansion form is atomic — no chance to branch wrong, no extra lines. `${var:?message}` exits the script with the named message; the canonical placement is the top of the script (see Variables).*
-- Do not improvise expansions beyond the shapes shown. The operator set is large and subtle (`#` vs `##`, `%` vs `%%`, `:-` vs `-`, `/` vs `//`) — when a case doesn't fit the examples, consult the references rather than guess.
-	- *This mirrors the top-of-file consumption rule: use the example; follow the link if it doesn't fit; don't invent.*
 
 Further research:
 1. [BashGuide: Parameters — Parameter Expansion](https://mywiki.wooledge.org/BashGuide/Parameters#Parameter_Expansion): the complete operator set with examples.
@@ -373,11 +365,11 @@ diff <(sort a.txt) <(sort b.txt)
 
 Rules:
 - Silence a command with `>/dev/null 2>&1`. Do not use `&>/dev/null`.
-	- *`>/dev/null` redirects stdout; `2>&1` points stderr at the same place. Two operators, two intents, in the order they happen. `&>` collapses both into one symbol that reads as "background-redirect" at a glance — shorter, less clear. Favor the form a reader can pronounce. Reach for this only to quiet a misbehaving tool that writes to the wrong stream; real errors are handled, not hidden.*
+	- *`>/dev/null` redirects stdout; `2>&1` points stderr at the same place. Reach for this only to quiet a misbehaving tool that writes to the wrong stream — real errors are handled, not hidden.*
 - Expand template variables into a file with `envsubst <template >output`. Do not pipe through `cat`.
 	- *envsubst substitutes exported `$VAR` references in the input, leaving other text literal — a compact templating idiom. The `cat <tmpl | envsubst >out` form spawns a useless process.*
 - Redirect a file into a command with `cmd <file`. Do not `cat file | cmd`.
-	- *The `cat` form spawns an extra process for no reason, and breaks for commands that need seekable input (random-access, not a byte stream). The anti-pattern has a name: UUOC — Useless Use of Cat.*
+	- *The `cat` form spawns an extra process, and breaks for commands that need seekable input (random-access, not a byte stream).*
 - Heredocs: unquoted delimiter (`<<EOF`) interpolates the body; quoted delimiter (`<<'EOF'`) treats it as literal. Quote whenever the body contains `$`, backticks, or `\` that should pass through unchanged.
 	- *The unquoted form is a reader-trap: `$PATH` in the body becomes the caller's `PATH`, not the literal string. When writing a script-into-a-script or embedding config with shell-looking syntax, quote the delimiter.*
 - Herestring `<<<` feeds a single string to a command's stdin — most often paired with `read` to split a line into fields. See the reference for the full shape.
@@ -495,7 +487,7 @@ Rules:
 
 Further research:
 1. [GNU Bash Manual: Pipelines](https://www.gnu.org/software/bash/manual/html_node/Pipelines.html) — authoritative pipeline semantics, including `|&`, exit status, and PIPESTATUS.
-2. [`man tee`](https://man7.org/linux/man-pages/man1/tee.1.html) · [`man yes`](https://man7.org/linux/man-pages/man1/yes.1.html) · [`man pgrep`](https://man7.org/linux/man-pages/man1/pgrep.1.html)
+2. [`man pgrep`](https://man7.org/linux/man-pages/man1/pgrep.1.html) — modern replacement for the `ps … | grep "[x]foo"` self-exclusion trick.
 
 ---
 
@@ -559,9 +551,8 @@ Rules:
 - One purpose per function. Name `verb_noun`, lowercase, underscores.
 	- *Functions that do one thing are testable in isolation. `verb_noun` reads as intent in the main program: `check_input "$file"` needs no further explanation.*
 - Define with `name() {`. Never `function name {` or `function name() {`.
-	- *Two forms for the same thing is noise. Pick the shorter one and stay with it — consistent across the script, consistent across the codebase.*
 - Separate each function from the next with two blank lines followed by a comment block. The function's purpose comment is that comment block.
-	- *One blank line separates logic inside a function. Two blank lines + a comment is the sibling-block separator used everywhere below the top-level rules — between functions here, between requirements in MAIN.*
+	- *Two blank lines + a comment is the standard sibling-block separator.*
 - Declare locals with `local`. Return status with `return N`; return values via stdout.
 	- *Without `local`, every assignment leaks into the caller's scope and silently clobbers state. Bash functions can only return an integer 0–255 as status — text must travel through stdout.*
 - Comment above each function with its purpose. Compact — one line when possible, more only when needed.
@@ -623,7 +614,7 @@ parse_args "$@"
 
 Rules:
 - The happy path for scripts that accept flags is a `while :; do / case "$1" in … esac; shift; done` loop. Wrap it in a `parse_args()` function defined in FUNCTIONS, alongside a `usage()` helper. Call `parse_args "$@"` as the first executable line of MAIN.
-	- *`while :; do` with `case` handles short flags, long flags, `--key value`, and `--` terminators in a single shape. It reads top-to-bottom, adds cases trivially, and requires no knowledge of `getopts` quirks. If this pattern doesn't solve the problem, consult the Further-research links below before reaching for an alternative.*
+	- *`while :; do` with `case` handles short flags, long flags, `--key value`, and `--` terminators in a single shape. It reads top-to-bottom, adds cases trivially, and requires no knowledge of `getopts` quirks.*
 - Inside the loop, match `"${1:-}"` (not bare `"$1"`) in the `case` head. With `set -u` active, a bare `$1` fails the moment arguments run out.
 	- *The loop terminates on `*) break` when `$1` is empty or a non-option; the `:-` default lets that match fire cleanly instead of aborting the script.*
 - `parse_args "$@"` is the first executable line after MAIN's closing rule. Placement follows MAIN's two-shape rule: with `parse_args`, MAIN takes its own full three-line frame and two blank lines separate the call from Goal 1.
@@ -693,7 +684,6 @@ Rules:
 - MAIN's opener takes one of two shapes, determined by whether the script parses arguments:
 	- **No `parse_args` call:** MAIN's closing rule is also Goal 1's top rule — one shared line, no gap. The MAIN label block and the first Goal's divider merge into a single five-line frame.
 	- **With a `parse_args` call:** MAIN takes its own full three-line frame. `parse_args "$@"` follows MAIN's closing rule immediately (no blank line). Two blank lines then separate it from Goal 1's own three-line divider.
-	- *The shared-line shape avoids a redundant separator when MAIN's content begins with the first Goal. Inserting `parse_args` breaks that adjacency, so the frames un-share and the normal two-blank sibling separator applies.*
 - Goals after the first always have their own full three-line divider, preceded by two blank lines — regardless of which opener shape MAIN used.
 	- *Between any two Goals, the top-level-section separator applies. The opener-sharing is a one-time economy at MAIN's boundary; it never recurs between Goals.*
 - Each Goal contains one or more REQs — discrete steps the Goal depends on.
@@ -736,7 +726,7 @@ Rules:
 - Every REQ that performs a check uses one of exactly two shapes. No others.
 	- **Shape A — Both outcomes.** `print_req` announces, an `if` tests a value, `print_pass` on success, `print_error "reason"` on failure. Use when the conditional can succeed or fail and both branches need reporting.
 	- **Shape B — Check-is-command.** `print_req` announces, the command itself is the test, only failure is announced: `if ! command; then print_error 'reason'; fi`. Use when the command's success has no value to verify — continued execution under `set -euo pipefail` is the success signal.
-	- *Two shapes, one rhythm: announce, test, report. Reading a dozen REQs feels like reading the same REQ twice over — the operator's eye locks onto the content, not the scaffolding. Shape B omits the success branch because forcing a `print_pass` there would duplicate the `print_req` above and add a branch that can never usefully differ from "kept running".*
+	- *Shape B omits the success branch because under `set -euo pipefail` continued execution is the success signal — a `print_pass` there would duplicate the `print_req` above.*
 - `print_pass` takes no arguments. The `print_req` above it already named what was tested.
 	- *Two strings saying the same thing is noise. The helper prints a short success marker; the reader's context is the REQ description one line up.*
 - `print_error` takes a short reason — one line, a fragment that completes the sentence "it failed because…", fitting within the 79-char limit after the banner's centering padding. It prints a banner to stderr and exits the script with status 1. Do not add `exit` after it.
@@ -778,7 +768,7 @@ exit 0
 
 Rules:
 - Close every **executable script** with a three-line `# --- / # fin~ / # ---` marker, then `exit 0` immediately below — no blank line between them.
-	- *`# fin~` is an artistic expression — the script's deliberate close, written by someone who cares how it reads. `exit 0` is the graceful terminator: explicit success, independent of whatever the last command returned.*
+	- *`exit 0` is explicit success, independent of whatever the last command returned.*
 - Sourced libraries (`*.func` files) use `return 0` in place of `exit 0`. Everything else about the closer is the same.
 	- *`exit` from sourced code terminates the caller, not the library. `return` leaves the sourced scope and hands control back to the script that sourced it — the correct terminator for a library.*
 - The marker and `exit 0` are the last lines of the file. Nothing follows them.
