@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "reference.md",
+                "file": "tmp/questions.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "reference"
+              "title": "questions"
             }
           }
         ]
@@ -185,9 +185,12 @@
   },
   "active": "0b03706fb0598dfa",
   "lastOpenFiles": [
+    "docs/skill-contract.md",
+    "tmp/questions.md",
     "tmp/review-remaining.md",
-    "tmp/syllabus.md",
+    "tmp/pressure-test-results.md",
     "reference.md",
+    "tmp/syllabus.md",
     "share/printer.func",
     "tmp",
     "etc/reference-format.md",
