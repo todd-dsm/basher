@@ -62,7 +62,9 @@ print_pass() {
 }
 
 
-# Error announcement: red banner bordered with tildes, to stderr, exit 1.
+# Error announcement: red banner bordered with tildes, to stderr, returns 1.
+# Under `set -e`, the non-zero return propagates and halts the script. Callers
+# that need to continue past a reported error suppress errexit with `|| true`.
 print_error() {
     local theMessage="$*"
     local border_char='~'
@@ -85,7 +87,7 @@ print_error() {
     printf '%s\n' "$padded_message" >&2
     printf "%s${reset}\n" "$border_line" >&2
     printf '\n' >&2
-    exit 1
+    return 1
 }
 
 
