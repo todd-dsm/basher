@@ -105,11 +105,13 @@ Rules:
 cp "$src" "$dst"
 for f in "${files[@]}"; do process "$f"; done
 if [[ "$status" = 'ready' ]]; then ...
+stamp="$(date '+%Y%m%d')"
 
 # DON'T
 cp $src $dst                    # src with a space becomes two args
 for f in ${files[@]}; do        # elements re-split on IFS
 if [[ $status = ready ]]; then  # RHS parsed as a glob, not a literal
+stamp=$(date '+%Y%m%d')         # works today; breaks when output has whitespace
 ```
 
 Rules:
@@ -119,6 +121,8 @@ Rules:
 	- *The carve-out is narrow: if the expansion would do exactly the right thing quoted, quote it. Reach for the unquoted form only when the splitting or globbing is the point — and for argument lists, an array is always the right shape in new code.*
 - Prefer single quotes for literal strings. Use double quotes only when expansion is intended.
 	- *Single quotes suppress `$`, backticks, and `\` — less to audit. Upgrading to double quotes the moment a `$` appears inside is lighter than remembering which expansions a double-quoted literal will interpret.*
+- Brace the name when the expansion is adjacent to word characters, a digit, or a parameter operator (`"${file}_backup"`, `"${arch##*-}"`). Use `"$var"` when the reference stands alone.
+	- *The brace is what ends the name. Without it, `$file_backup` reads as a different variable. The cost of always-brace on adjacency is two characters; the cost of forgetting is a silent bug.*
 - Arrays expand as `"${arr[@]}"`. Never `${arr[@]}`, `${arr[*]}`, or `"${arr[*]}"` — each is subtly different and almost never what you want.
 	- *`"${arr[@]}"` is the one form that yields one shell word per element, preserving boundaries. The other three collapse or re-split in ways that corrupt data with whitespace or glob metacharacters in it.*
 - Inside `[[ ]]`, quote the right-hand side of `=`/`!=` for literal comparison. Unquoted, the RHS is a glob pattern.
@@ -297,8 +301,8 @@ Rules:
 	- *Failing at the top with a named variable beats failing 200 lines later with a cryptic unbound-variable error or — worse — silent wrong behavior on an empty expansion.*
 - Group by origin: ENV (external), sourced (shared), local assignments, data pointers. Prune groups not used in this script — `template.sh` carries the full shape for reference.
 	- *The shape of the groups tells the next reader what the script depends on at a glance. A pruned script shows only real dependencies; nothing to mistake for a forgotten slot.*
-- Name local assignments lowercase. Reserve `UPPER_CASE` for exported/environment variables.
-	- *Convention from POSIX forward. Mixing cases makes `set -x` output harder to scan.*
+- Name local assignments `snake_case`. Reserve `UPPER_CASE` for exports and script-level constants. No `camelCase`.
+	- *`snake_case` is the UNIX convention — every system tool, every man page, every config uses it. A script that mixes `maxRetries` with `/etc/max_retries.conf` adds friction for no gain. Consistent case also makes `set -x` output scannable.*
 - Quote string values; leave bare booleans and bare integers unquoted. Numbers formatted for display (commas, units) are strings — quote them.
 	- *Quoting tracks semantics: a string you'll pass around and print is quoted; a scalar you'll compute with is not. `region='us-west-2'` is a string; `port=8080` is an integer; `threshold='1,000,000'` is a formatted string that happens to look numeric. Single vs. double quote choice is covered in the Quoting section.*
 
