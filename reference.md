@@ -11,6 +11,8 @@ The code block in each section is the answer. Use it directly.
 
 If the example does not meet your requirements, consult the section's "Further research" links before reaching for an alternative pattern. Do not improvise — every link is vetted for that construct's edge and corner cases. Pick the happy path first; follow the links when it does not fit.
 
+Further-research entries are tagged *practice* (implementation best practices, typically from mywiki.wooledge.org) or *reference* (authoritative syntax, from the GNU Bash Manual). Start with *practice*; reach for *reference* when the question is about exact syntax or undocumented corners.
+
 ---
 
 ## Starter Kit
@@ -247,6 +249,8 @@ Rules:
 	- *Execution runs in a child shell and the flags die with it; sourcing runs in the caller's shell and the flags stay. Libraries must not leak behavior the caller didn't opt into.*
 - Keep all three flags together, in the order `-euo pipefail`, on one `set` line. For debugging, add `x` → `set -euxo pipefail`; remove it when done.
 	- *One line is easier to read and edit; the top-of-body placement puts the `x` one character away when tracing is needed.*
+- For counters, use `count=$((count + 1))`. Do not write `(( count++ ))` under `set -e`.
+	- *`(( count++ ))` returns the pre-increment value as its exit status. When the counter is 0, that's exit 1, and `set -e` aborts. The assignment form yields a value and the `=` completes with exit 0 regardless. Other safe forms (`: $((count++))`, `(( count++ )) || true`) exist; consult the Further research links when the assignment form does not fit.*
 
 What each flag does:
 - `-e` — exit immediately if any command exits non-zero (outside of tested conditions like `if` and `&&/||`).
@@ -254,8 +258,9 @@ What each flag does:
 - `-o pipefail` — a pipeline's exit status is the rightmost non-zero status, not just the last command's. Without it, `false | true` returns 0.
 
 Further research:
-1. [BashFAQ/105: errexit pitfalls](https://mywiki.wooledge.org/BashFAQ/105): the edge cases and surprises of `set -e`.
-2. [BashGuide: Practices](https://mywiki.wooledge.org/BashGuide/Practices): where these flags fit in broader script hygiene.
+1. [BashFAQ/105: errexit pitfalls](https://mywiki.wooledge.org/BashFAQ/105) — *practice.* The edge cases and surprises of `set -e`, including the counter-increment interaction above.
+2. [BashGuide: Practices](https://mywiki.wooledge.org/BashGuide/Practices) — *practice.* Where these flags fit in broader script hygiene.
+3. [GNU Bash Manual: Shell Arithmetic](https://www.gnu.org/software/bash/manual/html_node/Shell-Arithmetic.html) — *reference.* Authoritative definitions of arithmetic expansion (`$(( … ))`), the `(( … ))` compound command, and their exit-status semantics.
 
 ---
 

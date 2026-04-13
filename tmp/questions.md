@@ -83,7 +83,13 @@ The CAs accept this as compliant behavior — they produced the standard loop. U
 
 ---
 
-## Q5 — `(( var++ ))` is a silent killer under `set -e`
+## Q5 — `(( var++ ))` is a silent killer under `set -e` (RESOLVED 2026-04-13)
+
+**Resolution:** Rule added to §Error Mode naming `count=$((count + 1))` as the canonical form; alternatives (`: $((count++))`, `(( count++ )) || true`) referenced via Further-research. Top-of-file note now tags research links as *practice* (wooledge) or *reference* (GNU Bash Manual). Validated by test-b remediation (`script-remediated.sh` in `/tmp/pressure/test-b-log-archival/` — exit 0, correct counts).
+
+---
+
+### Original write-up
 
 **Surfaced in:** test-b — script crashed after compressing the first file (`((count_compressed++))` at `script.sh:109`)
 
