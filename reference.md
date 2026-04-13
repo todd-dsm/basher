@@ -775,3 +775,35 @@ Rules:
 	- *A trailing newline is fine; a trailing comment, unreachable code, or additional statement is not.*
 
 ---
+
+## Examples
+
+<!-- Concrete patterns, tagged. The body of the reference teaches primitives; this appendix shows primitives composed into real sysadmin idioms. Scan the tags for the pattern that matches the task at hand. -->
+
+### Config-file convergence
+
+**Tags:** #idempotent · #config-drift · #declarative
+
+Check the target state; act only on what's missing; report both outcomes. Re-runnable to convergence without side effects — the script is its own convergence check.
+
+```bash
+# diff-first dispatch: cheap check, expensive remediation only when needed
+if ! diff "$target_config" "$spec_file" >/dev/null; then
+    while IFS= read -r line; do
+        [[ "$line" = \#* ]] && continue
+        key="${line%% = *}"
+        if ! grep -qF -- "$key" "$target_config"; then
+            sed -i "/$anchor/a\\ $line" "$target_config"
+            print_pass "added: $line"
+        else
+            print_pass "already set: $line"
+        fi
+    done < "$spec_file"
+fi
+```
+
+**Primitives used:** §Parameter Expansion (`${line%% = *}` extracts the key from a `key = value` line without forking), §Loops (`while read` over a spec file of unknown length), §Redirection (`diff … >/dev/null` as a pure comparison oracle), §External Tools (`grep -qF` for literal, quiet existence check).
+
+**See also:** [Ansible `lineinfile` module](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/lineinfile_module.html) — the formal version of this pattern with `insertafter` anchors and idempotent state management.
+
+---
