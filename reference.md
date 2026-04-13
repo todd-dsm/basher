@@ -464,6 +464,41 @@ Further research:
 
 ---
 
+## Pipelines
+
+<!-- Recognize the patterns; the man pages teach them. -->
+
+```bash
+# Long pipelines: break with \, continue with leading |
+curl -s "$url" \
+    | jq -r '.items[].metadata.name' \
+    | grep -v '^kube-' \
+    | xargs -I{} kubectl delete pod {}
+
+# Watch output live and capture to disk
+scripts/my_script.sh 2>&1 | tee /tmp/my_script.log
+
+# Batch-confirm destructive commands
+yes | gcloud container clusters delete "$cluster_name" --region "$region"
+
+# Self-exclude grep from its own ps output (dry-run without `kill` first)
+ps aux | grep "[v]ault server" | awk '{print $2}' | xargs kill
+```
+
+Rules:
+- Leading-pipe continuation for multi-line pipelines — each stage reads as a distinct step.
+- `| tee /tmp/$script.log` in the script's EXECUTE header tells the operator how to capture output live.
+- `yes | cmd` feeds unlimited `y\n` for non-interactive flows with known-safe prompts.
+- `grep "[x]foo"` matches `xfoo` but not the literal `[x]foo` — so grep excludes itself from its own `ps` output. Use `pgrep` when available.
+- Dry-run `xargs kill` before automating. Run the pipeline with `kill` removed, confirm the PID list, then wire it in — an over-broad pattern kills the wrong processes.
+- `curl | bash`: vendor-installer pattern. Security tradeoffs are on the operator; not endorsed here.
+
+Further research:
+1. [GNU Bash Manual: Pipelines](https://www.gnu.org/software/bash/manual/html_node/Pipelines.html) — authoritative pipeline semantics, including `|&`, exit status, and PIPESTATUS.
+2. [`man tee`](https://man7.org/linux/man-pages/man1/tee.1.html) · [`man yes`](https://man7.org/linux/man-pages/man1/yes.1.html) · [`man pgrep`](https://man7.org/linux/man-pages/man1/pgrep.1.html)
+
+---
+
 ## Functions
 
 <!-- Logic inlined in the main program turns a script into a transcript. Functions named for what they do let the main program read as a sequence of intentions, and let each piece be tested and reused. -->
