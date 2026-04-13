@@ -243,10 +243,8 @@ Rules:
 	- *First executable line means the flags govern the entire script body. No blank above means the line rides with the header as a single opening unit — shebang, header, mode. The reader sees the script's operating posture in one uninterrupted block.*
 - Sourced libraries (`*.func` files) **omit this line**. Shell options set inside a sourced file persist in the caller's shell — a library that runs `set -euo pipefail` silently changes the error-handling posture of every script that sources it. Libraries define functions and return; the caller picks its own error mode.
 	- *Execution runs in a child shell and the flags die with it; sourcing runs in the caller's shell and the flags stay. Libraries must not leak behavior the caller didn't opt into.*
-- Keep all three flags together, in the order `-euo pipefail`. Do not split them across multiple `set` calls.
-	- *One line is easier to read, easier to edit, and keeps the three behaviors visible as a set rather than scattered decisions.*
-- For debugging, add `x`: `set -euxo pipefail`. Remove it when debugging is done.
-	- *The flag line sits at the top of the body precisely so the `x` is a one-character edit at a glance-findable location. A `set -x` buried later traces only part of the run.*
+- Keep all three flags together, in the order `-euo pipefail`, on one `set` line. For debugging, add `x` → `set -euxo pipefail`; remove it when done.
+	- *One line is easier to read and edit; the top-of-body placement puts the `x` one character away when tracing is needed.*
 
 What each flag does:
 - `-e` — exit immediately if any command exits non-zero (outside of tested conditions like `if` and `&&/||`).
@@ -623,6 +621,8 @@ Rules:
 	- *Help to stdout can be piped to `less`; errors to stderr stay visible under output redirection. Exit 2 is the POSIX convention for misuse, distinct from `print_error`'s exit 1 for application failure.*
 - Required positional arguments consumed after the loop use the same assertion pattern as Variables (`: "${VAR?message}"`).
 	- *One assertion style across the whole script. The operator sees the same shape of error whether the missing input was a flag, an env var, or a positional arg.*
+- Scripts that read stdin accept `-` as a filename synonym for stdin and document the form in the header's EXECUTE line.
+	- *`-` is the POSIX/GNU convention; `./script.sh -` and `cmd | ./script.sh -` behave the same. Document it in EXECUTE so the operator sees the invocation shape alongside the flag list.*
 
 Further research:
 1. [BashFAQ/035: Handling command-line arguments](https://mywiki.wooledge.org/BashFAQ/035): the authoritative reference — when `getopts` is enough, when to parse manually, and the trade-offs of each approach. Consult before deviating from the happy path above.
@@ -688,6 +688,8 @@ Rules:
 	- *Between any two Goals, the top-level-section separator applies. The opener-sharing is a one-time economy at MAIN's boundary; it never recurs between Goals.*
 - Each Goal contains one or more REQs — discrete steps the Goal depends on.
 	- *REQs support Goals the way Goals support the PURPOSE.*
+- Goals and REQs share script-global variables. A REQ may depend on state established by any earlier REQ — within its own Goal or in any prior Goal — since execution is top-to-bottom sequential.
+	- *A pipeline shape `A → B → C` is the norm: each REQ consumes what the previous one produced. Local-only state is the exception, achieved with `local` inside a function, not at REQ scope.*
 - REQ divider: short three-line form `# --- / # REQN / # ---`. The label is the bare sequential identifier — `REQ1`, `REQ2`, … — nothing else. Never concatenate with a purpose string.
 - REQ numbering resets per Goal. Each Goal's first REQ is `REQ1`.
 	- *REQs are scoped to their Goal. Per-Goal numbering lets Goals be reordered without renumbering the script.*
@@ -771,8 +773,8 @@ Rules:
 	- *`exit 0` is explicit success, independent of whatever the last command returned.*
 - Sourced libraries (`*.func` files) use `return 0` in place of `exit 0`. Everything else about the closer is the same.
 	- *`exit` from sourced code terminates the caller, not the library. `return` leaves the sourced scope and hands control back to the script that sourced it — the correct terminator for a library.*
-- The marker and `exit 0` are the last lines of the file. Nothing follows them.
-	- *A trailing newline is fine; a trailing comment, unreachable code, or additional statement is not.*
+- All application failures go through `print_error` (exit 1); reserve other non-zero codes for documented contracts.
+	- *Exit 2 is argument-parsing error (§Argument Parsing). Anything beyond 0, 1, 2 is a contract with a specific caller and needs to be named — undocumented codes look like bugs.*
 
 ---
 

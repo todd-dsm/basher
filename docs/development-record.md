@@ -47,6 +47,14 @@ Evidence of activities performed during basher development (ISO/IEC/IEEE 15289:2
 ### Changed (condensation pass)
 - `reference.md` consistency/redundancy review (17 findings applied): dropped meta-rules that echoed the top-of-file consumption rule (§Parameter Expansion, §Argument Parsing); removed duplicate two-blank-line rule from §Error Mode (§Section Frame governs globally); trimmed §Script Header PREREQS from category-list prose to functional test; trimmed rhetorical italic subtext across §Indentation, §Line Width, §Invocation, §Quoting, §Error Mode, §Variables, §Section Frame, §Redirection, §Functions, §Main, §Checks, §Exit; reduced §Pipelines man-page links from 3 to 1. Load-bearing footgun guidance preserved (§Starter Kit printer contract, §External Tools macOS Darwin caveat, §Loops process-substitution subshell-scope rule)
 
+### Closed (remaining review items from tmp/review-remaining.md)
+- §Exit: exit-code contract rule added (`print_error` owns exit 1; reserve other codes for documented contracts)
+- §Error Mode: merged flag-order rule with debug-x rule into one line
+- §Exit: deleted "last lines of the file" tautology (preceding rule already states it)
+- §Main: added Goal/REQ state-sharing rule with PM-corrected framing (execution is top-to-bottom sequential; any REQ may depend on state from any earlier REQ in any prior Goal; pipeline shape `A → B → C` is the norm)
+- §Argument Parsing: added stdin-handling rule (`-` as filename synonym for stdin; document in EXECUTE)
+- `tmp/review-remaining.md` updated: all open items from formal review now closed
+
 ---
 
 ## 2026-04-11
