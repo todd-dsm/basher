@@ -513,6 +513,8 @@ Rules:
 	- *The `XXXXXX` is not literal — mktemp replaces it with random characters and returns a guaranteed-unique path. A project prefix (`my_script-`, `deploy-`) makes tempfiles traceable when `/tmp` fills.*
 - Pair every `mktemp` with `trap 'rm -rf "$path"' EXIT`. Set the trap immediately after the mktemp line, before any work.
 	- *The EXIT trap fires on success, failure, error, and ctrl-C alike. Setting it at the top (not at the end of main) means every abort path cleans up — including the error the script doesn't know about yet. For sensitive material, that discipline is the difference between "exists for a moment" and "leaks on crash."*
+- An `EXIT` trap body must not include `exit`. Let the script's real exit status flow through — `exit 0` (or any explicit code) in a trap body masks failures from `set -e`, `print_error`'s `return 1`, signals, and explicit error paths alike. For signal-specific behavior (e.g., normalize SIGINT's 130 to 0), use a dedicated `trap 'handler' INT` instead of overriding EXIT.
+	- *The trap is cleanup, not flow control. The script owns its exit status; the trap just has to not wreck it.*
 - Do not hand-roll temp paths. `/tmp/$$.tmp`, `/tmp/script.log`, or any literal fixed name is a race condition waiting to happen.
 	- *A literal name collides between concurrent invocations; `$$` collides when PIDs wrap. mktemp is the one right answer.*
 

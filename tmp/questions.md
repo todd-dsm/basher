@@ -110,7 +110,15 @@ Safe forms the reference already shows:
 
 ---
 
-## Q6 — Cleanup traps can swallow failure exit codes
+## Q6 — Cleanup traps can swallow failure exit codes (RESOLVED 2026-04-13 — revisit after basher matures)
+
+**Resolution:** Rule added to §Temp Files: EXIT trap bodies must not include `exit`; signal-specific normalization (e.g., SIGINT → 0) uses a dedicated `trap 'handler' INT` instead. Q1's `return 1` change narrowed the surface area but did not eliminate it — set -e aborts, `-u`/pipefail failures, and explicit exits can all still be masked.
+
+**Marked for later review.** Revisit once basher has matured in real use: does the rule hold, is the signal-specific-trap carve-out used enough to warrant its own §Examples entry, does any pattern surface that the rule didn't anticipate?
+
+---
+
+### Original write-up
 
 **Surfaced in:** test-d (`script.sh:1068` — `cleanup() { … exit 0; }` inside the EXIT trap)
 
