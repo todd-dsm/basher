@@ -41,6 +41,9 @@ Evidence of activities performed during basher development (ISO/IEC/IEEE 15289:2
 - `reference.md` §Pipelines — new section naming the distinctive idioms: leading-pipe continuation, `| tee` invocation convention, `yes | cmd` batch-confirm, `grep "[x]foo"` self-exclusion trick, `curl | bash` vendor-installer caveat; dry-run note for `xargs kill`; cites GNU Bash manual Pipelines, man tee/yes/pgrep
 - `reference.md` §Temp Files — new section; `mktemp -d /tmp/name-XXXXXX` + paired `trap 'rm -rf "$tmp"' EXIT` as the security-aware ephemeral-artifact shape; bans hand-rolled `/tmp/$$.tmp`; cites man mktemp, BashFAQ/062
 
+### Changed (condensation pass)
+- `reference.md` consistency/redundancy review (17 findings applied): dropped meta-rules that echoed the top-of-file consumption rule (§Parameter Expansion, §Argument Parsing); removed duplicate two-blank-line rule from §Error Mode (§Section Frame governs globally); trimmed §Script Header PREREQS from category-list prose to functional test; trimmed rhetorical italic subtext across §Indentation, §Line Width, §Invocation, §Quoting, §Error Mode, §Variables, §Section Frame, §Redirection, §Functions, §Main, §Checks, §Exit; reduced §Pipelines man-page links from 3 to 1. Load-bearing footgun guidance preserved (§Starter Kit printer contract, §External Tools macOS Darwin caveat, §Loops process-substitution subshell-scope rule)
+
 ---
 
 ## 2026-04-11
