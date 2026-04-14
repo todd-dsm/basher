@@ -10,7 +10,15 @@ Six reference-improvement candidates below. For discussion; no edits applied yet
 
 ## HIGH — clear reference issues
 
-### 1. §Checks vs §Examples: `print_pass` argument policy contradiction
+### 1. §Checks vs §Examples: `print_pass` argument policy contradiction (RESOLVED 2026-04-13 cycle 2)
+
+**Resolution:** the §Examples `#config-drift` block was wrong; the §Checks rule is right. The canonical iteration shape is `print_req "process <item>"` inside the loop + bare `print_pass` on success. Variant information (added vs already set, days remaining, etc.) belongs in §Report counts, not in `print_pass` args. Rewrote both instances of the block (the §Examples canonical entry and the §Comments DO example) to match. `printer.func` unchanged; `print_pass` keeps its zero-arg contract.
+
+**Closes Finding 3 jointly** — test-a's "printf above bare print_pass" pattern was also a misreading of the model. `print_req "check <host>"` per iteration + bare `print_pass` on success is the correct shape; per-host context on success is not emitted (the `print_req` above it names what was tested; operator gets pass-or-fail).
+
+---
+
+### Original write-up
 
 **Surfaced in:** test-c (`score.md` Notes; also test-d's peer scripts use same form)
 
@@ -18,14 +26,7 @@ Six reference-improvement candidates below. For discussion; no edits applied yet
 - **§Checks rule:** *"`print_pass` takes no arguments."*
 - **§Examples `#config-drift` block** (which test-c's spec explicitly directs the CA to follow): uses `print_pass "added: $line"` and `print_pass "already set: $line"` verbatim.
 
-The CA followed §Examples verbatim per the spec's cue. `printer.func` silently discards extra args, so output is unaffected — but the reference is internally inconsistent, and the CA had to choose which rule to honor.
-
-**Candidate fixes:**
-- **(a)** Relax §Checks: *"print_pass takes no arguments by default; per-iteration contexts may pass a short identifier."*
-- **(b)** Rewrite the §Examples `#config-drift` block to use bare `print_pass` with a separate context line above it.
-- **(c)** Leave §Checks strict; note in §Examples block that `print_pass` takes no args and use a printf-above pattern.
-
-**Recommendation pending.** (a) is the smallest change and codifies what the corpus actually does. (c) keeps §Checks strict but requires a small §Examples rewrite.
+The CA followed §Examples verbatim per the spec's cue.
 
 ---
 

@@ -105,12 +105,11 @@ if ! diff "$target_config" "$spec_file" >/dev/null; then
         # ignore commented lines in the spec
         [[ "$line" = \#* ]] && continue
         key="${line%% = *}"
+        print_req "process $key"
         if ! grep -qF -- "$key" "$target_config"; then
             sed -i "/$anchor/a\\ $line" "$target_config"
-            print_pass "added: $line"
-        else
-            print_pass "already set: $line"
         fi
+        print_pass
     done < "$spec_file"
 fi
 
@@ -865,17 +864,16 @@ if ! diff "$target_config" "$spec_file" >/dev/null; then
     while IFS= read -r line; do
         [[ "$line" = \#* ]] && continue
         key="${line%% = *}"
+        print_req "process $key"
         if ! grep -qF -- "$key" "$target_config"; then
             sed -i "/$anchor/a\\ $line" "$target_config"
-            print_pass "added: $line"
-        else
-            print_pass "already set: $line"
         fi
+        print_pass
     done < "$spec_file"
 fi
 ```
 
-**Primitives used:** §Parameter Expansion (`${line%% = *}` extracts the key from a `key = value` line without forking), §Loops (`while read` over a spec file of unknown length), §Redirection (`diff … >/dev/null` as a pure comparison oracle), §External Tools (`grep -qF` for literal, quiet existence check).
+**Primitives used:** §Checks (`print_req` per iteration, bare `print_pass` on success), §Parameter Expansion (`${line%% = *}` extracts the key from a `key = value` line without forking), §Loops (`while read` over a spec file of unknown length), §Redirection (`diff … >/dev/null` as a pure comparison oracle), §External Tools (`grep -qF` for literal, quiet existence check).
 
 **See also:** [Ansible `lineinfile` module](https://docs.ansible.com/ansible/latest/collections/ansible/builtin/lineinfile_module.html) — the formal version of this pattern with `insertafter` anchors and idempotent state management.
 
