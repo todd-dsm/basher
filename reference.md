@@ -4,9 +4,6 @@ A single-file reference of GNU Bash constructs for the `cascadian:bash` skill.
 
 > **You are the `cascadian:bash` skill.** This reference defines the conformance target for every bash script you produce or modify. Compliance is the skill's sole purpose; deviation means the output is not compliant. Apply every rule. Use every example. Follow the "Further research" links only when the example does not fit.
 
-<!-- Consumption: fetch this file raw from GitHub. One file, one source of truth. -->
-<!-- Structure: each section is a self-contained construct with "do this, not that" pairs. -->
-
 The code block in each section is the answer. Use it directly.
 
 If the example does not meet your requirements, consult the section's "Further research" links before reaching for an alternative pattern. Do not improvise — every link is vetted for that construct's edge and corner cases. Pick the happy path first; follow the links when it does not fit.
@@ -98,9 +95,7 @@ Rules:
 
 ## Comments
 
-<!-- A maintained script is a story the next reader inherits. Code says how; comments say what and why. Together they read as a single narrative, so the next maintainer picks up where the author left off without asking. -->
-
-<!-- Functionally, a comment is lightweight pseudocode — a requirement or contract that the code below implements. When the two agree, the next reader evaluates the code against the comment and refactors the implementation (50 chars → 30, one idiom to another, a faster form) without rebuilding the intent from scratch. This is foundational collaboration: WHAT is preserved; HOW is free to evolve. -->
+<!-- A maintained script is a story the next reader inherits. The comment is the contract (WHAT); the code is one implementation (HOW). When the two agree, the next maintainer refactors freely without rebuilding intent. -->
 
 ```bash
 # DO — the comment is the contract; the code is one implementation
@@ -132,7 +127,6 @@ while IFS= read -r line; do …
 
 Rules:
 - Comments express intent; code expresses one implementation. When the comment names the strategy, invariant, or domain-level goal of the block below, the next reader evaluates the code against the comment and refactors freely — 50 chars to 30, one idiom to another — without rebuilding the purpose.
-	- *This is the foundational collaboration primitive: WHAT is preserved in the comment; HOW is free to evolve in the code. A spartan file without this layer forces every maintainer to re-derive the intent before changing anything.*
 - Write comments generously where they orient the reader. Block-level strategy, domain-language intent for idioms, non-obvious invariants, edge cases the author has already thought through.
 	- *Err toward comments that serve the next reader. The concern isn't "too many comments"; the concern is "comments that add no signal."*
 - Do not restate what the code already says. `# read spec_file one line at a time` above `while IFS= read -r line` doubles the reading load without adding signal.
@@ -141,7 +135,6 @@ Rules:
 	- *`# NOTE: chose while-case over getopts` is a process note. Six months later it's a dead leaf; pick one channel (docs, PR, commit) and let it live there.*
 - Do not restate the reference. `# §Quoting applied` patronizes the informed reader and misleads the uninformed one.
 	- *The code follows the rule whether or not a comment says so. If the reader wants the rule, they read the reference.*
-- Section banners, function-purpose lines, and REQ dividers are the story's beats. Titles, not summaries — keep them short.
 
 ---
 
@@ -803,7 +796,6 @@ Rules:
 - Every REQ that performs a check uses one of exactly two shapes. No others.
 	- **Shape A — Both outcomes.** `print_req` announces, an `if` tests a value, `print_pass` on success, `print_error "reason"` on failure. Use when the conditional can succeed or fail and both branches need reporting.
 	- **Shape B — Check-is-command.** `print_req` announces, the command itself is the test, only failure is announced: `if ! command; then print_error 'reason'; fi`. Use when the command's success has no value to verify — continued execution under `set -euo pipefail` is the success signal.
-	- *Shape B omits the success branch because under `set -euo pipefail` continued execution is the success signal — a `print_pass` there would duplicate the `print_req` above.*
 - `print_pass` takes no arguments. The `print_req` above it already named what was tested.
 	- *Two strings saying the same thing is noise. The helper prints a short success marker; the reader's context is the REQ description one line up.*
 - `print_error` takes a short reason — one line, a fragment that completes the sentence "it failed because…", fitting within the 79-char limit after the banner's centering padding. It prints a banner to stderr and returns 1; under `set -euo pipefail`, the non-zero return propagates and halts the script. Do not add `exit` after it.
