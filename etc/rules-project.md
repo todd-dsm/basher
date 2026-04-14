@@ -24,6 +24,22 @@ Before writing a rule, put yourself in the ca's position and ask: does the ca al
 - If the ca would guess wrong or be unopinionated where basher has a preference: write the rule.
 - The goal is something highly probable to solve the ca's issue — not every possible issue. `reference.md` is a starting point, not a destination. If the ca writes a compliant script using it, the format works; if not, adjust.
 
+## Engineering Principles
+
+Software is a virtual circuit. When we create a piece of software, we build a logical construct analogous to a physical circuit — signal flows through components that do work along defined paths. The shorter the signal path, the more efficient the circuit. Efficiency is highly valued.
+
+Construction delivers signal. Testing reveals opportunities to shorten it. Simplify all things.
+
+The aspirations this project measures itself against:
+
+> "Everything should be made as simple as possible, but not simpler."
+> — Albert Einstein
+
+> "Perfection is achieved, not when there is nothing more to add, but when there is nothing left to take away."
+> — Antoine de Saint-Exupéry
+
+**There is no preference in technology — only aspirational principles.** Every choice in `reference.md`, `printer.func`, `skill-contract.md`, and in the CA's produced scripts is measured against signal-path efficiency, not taste, not author comfort. When two shapes both work, the one with the shorter signal path wins.
+
 ## Domain Constraints
 
 - Single-file product (`reference.md`) — all constructs in one document, no splitting

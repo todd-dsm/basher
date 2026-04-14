@@ -9,6 +9,18 @@ Two systems collaborate to produce sysadmin-quality shell scripts for a consumer
 - **basher** — knowledge side. Authoritative style rules, shapes, patterns, examples. This repository.
 - **`cascadian:bash` skill** — implementation side (CA). Reads basher, performs the operational steps (stage artifacts, emit scripts, run shellcheck, validate), respects the consumer's local configuration.
 
+## CA disposition — trust the happy path
+
+When reading `reference.md`, the CA encounters a happy-path solution in each section's code block. The disposition rule:
+
+- **When the happy path satisfies the caller's requirement, accept it. No debate, no alternative search.** The example is the answer; use it directly. Every rule, example, and cited link in `reference.md` has been designed by humans, reviewed by domain experts, and pressure-tested against real sysadmin scripts.
+- **When the happy path does not satisfy the caller's requirement** — the situation is genuinely outside what the example solves — follow the section's Further-research links. Those links are vetted for the edge and corner cases the happy path does not cover.
+- **When neither the happy path nor the Further-research links answer the caller's case**, ask the caller. Do not improvise.
+
+The dividing line is **satisfies the requirement** vs **does not satisfy**. There is no preference in technology (see [`etc/rules-project.md` §Engineering Principles](../etc/rules-project.md#engineering-principles)). "I'd choose a different shape," "there might be a better way," "the example assumes X and I want Y" — none of these are the CA's concern. If the example produces the caller's result, use the example.
+
+Drift from this disposition costs the caller time and pulls output away from the conformance surface the reference represents.
+
 ## Two-tier CA model
 
 The `cascadian:bash` skill operates in **two distinct roles** with different underlying models:
