@@ -61,7 +61,13 @@ Test-b needs bulk action across matching files AND script-local counters (`compr
 
 ## MEDIUM — pattern worth naming
 
-### 3. Per-iteration context line above bare `print_pass`
+### 3. Per-iteration context line above bare `print_pass` (RESOLVED jointly with Finding 1)
+
+**Resolution:** the CA's invented pattern was a misreading of the model. Under the correct shape, per-iteration context belongs in `print_req` (which names what's being tested), not in a `printf` above `print_pass`. No new §Examples entry needed. See Finding 1.
+
+---
+
+### Original write-up
 
 **Surfaced in:** test-a (`score.md` Notes)
 
