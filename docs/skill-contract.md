@@ -140,13 +140,13 @@ On first invocation in a consumer's repo, the skill must stage `share/printer.fu
 
 **Proposed behavior:** the skill checks for `scripts/lib/printer.func` at the start of every run; if absent, stages it from basher's `share/printer.func`. Idempotent — subsequent runs are no-ops.
 
-### S2 — CA prompt conventions: suppress decision-log comments (Q7)
+### S2 — CA prompt conventions: comments serve the reader, not the author (Q3/Q7)
 
-During the pressure test, a Haiku CA produced a 1536-line script that was ~90% `# NOTE:` decision-log narration. Root cause: the author's prompt said "mark each judgment call with a `# NOTE:` comment."
+During the pressure test, a Haiku CA produced a 1536-line script that was ~90% `# NOTE:` decision-log narration. Root cause: the author's prompt said "mark each judgment call with a `# NOTE:` comment" — license to embed a decision log in the script.
 
-**Proposed behavior:** the skill's prompt to the underlying model should say: *"List judgment calls in your final message, not in the script. Comments in the emitted script explain what the code cannot; they do not narrate design decisions."*
+**Proposed behavior:** the skill's prompt to the underlying model should say: *"Write comments that serve the next reader following the script's story (see §Comments in reference.md). Comments express intent as lightweight pseudocode that the code below implements — so a future maintainer can evaluate and refactor the implementation against the contract. Do not embed decision logs in the script; list judgment calls in your final message instead."*
 
-This is a prompt-engineering concern, not a style rule — basher's reference will gain a §Comments rule (Q7 candidate fix) but the skill is where the prompt discipline lives.
+This pairs with basher's §Comments rule. Reference teaches the positive principle (comments as contract / pseudocode that decouples intent from implementation); skill enforces the CA-specific negative case (no decision-log narration in the emitted file).
 
 ### S3 — CA prompt conventions: printer path is canonical (Q2, continued)
 

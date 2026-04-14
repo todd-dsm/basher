@@ -96,6 +96,55 @@ Rules:
 
 ---
 
+## Comments
+
+<!-- A maintained script is a story the next reader inherits. Code says how; comments say what and why. Together they read as a single narrative, so the next maintainer picks up where the author left off without asking. -->
+
+<!-- Functionally, a comment is lightweight pseudocode — a requirement or contract that the code below implements. When the two agree, the next reader evaluates the code against the comment and refactors the implementation (50 chars → 30, one idiom to another, a faster form) without rebuilding the intent from scratch. This is foundational collaboration: WHAT is preserved; HOW is free to evolve. -->
+
+```bash
+# DO — the comment is the contract; the code is one implementation
+# diff-first dispatch: cheap check, expensive remediation only when needed
+if ! diff "$target_config" "$spec_file" >/dev/null; then
+    while IFS= read -r line; do
+        # ignore commented lines in the spec
+        [[ "$line" = \#* ]] && continue
+        key="${line%% = *}"
+        if ! grep -qF -- "$key" "$target_config"; then
+            sed -i "/$anchor/a\\ $line" "$target_config"
+            print_pass "added: $line"
+        else
+            print_pass "already set: $line"
+        fi
+    done < "$spec_file"
+fi
+
+# DON'T — restate what the code already says
+# read spec_file one line at a time
+while IFS= read -r line; do …
+
+# DON'T — narrate design decisions
+# NOTE: Considered getopts, chose while-case for long-flag support
+
+# DON'T — restate rules the reference already teaches
+# §Quoting applied — all expansions quoted
+```
+
+Rules:
+- Comments express intent; code expresses one implementation. When the comment names the strategy, invariant, or domain-level goal of the block below, the next reader evaluates the code against the comment and refactors freely — 50 chars to 30, one idiom to another — without rebuilding the purpose.
+	- *This is the foundational collaboration primitive: WHAT is preserved in the comment; HOW is free to evolve in the code. A spartan file without this layer forces every maintainer to re-derive the intent before changing anything.*
+- Write comments generously where they orient the reader. Block-level strategy, domain-language intent for idioms, non-obvious invariants, edge cases the author has already thought through.
+	- *Err toward comments that serve the next reader. The concern isn't "too many comments"; the concern is "comments that add no signal."*
+- Do not restate what the code already says. `# read spec_file one line at a time` above `while IFS= read -r line` doubles the reading load without adding signal.
+	- *Restating translates bash into English — work the reader does not need. Good variable names already say what happens.*
+- Do not narrate design decisions. Those belong in the documentation, PR description, or commit message; one place is enough.
+	- *`# NOTE: chose while-case over getopts` is a process note. Six months later it's a dead leaf; pick one channel (docs, PR, commit) and let it live there.*
+- Do not restate the reference. `# §Quoting applied` patronizes the informed reader and misleads the uninformed one.
+	- *The code follows the rule whether or not a comment says so. If the reader wants the rule, they read the reference.*
+- Section banners, function-purpose lines, and REQ dividers are the story's beats. Titles, not summaries — keep them short.
+
+---
+
 ## Quoting
 
 <!-- Unquoted expansion runs two passes most authors didn't ask for: word-splitting on IFS, then pathname expansion on any token that looks like a glob. A filename with a space or a `*` silently becomes multiple arguments or a list of matches. The rule isn't "quote when it matters" — it's "quote always; the only time you don't is when word-splitting is exactly what you mean." -->

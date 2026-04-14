@@ -47,7 +47,15 @@ Questions surfaced during the 2026-04-13 pressure-test session. Each is a case w
 
 ---
 
-## Q3 — Comment discipline: no general rule
+## Q3 — Comment discipline: no general rule (RESOLVED 2026-04-13)
+
+**Resolution:** §Comments section added to reference.md (between §Indentation and §Quoting). Principle: comments express intent as lightweight pseudocode that the code implements — "WHAT is preserved; HOW is free to evolve." Positive rule (write comments generously where they orient the reader) paired with prohibitions (don't restate code, don't narrate decisions, don't restate the reference). skill-contract.md S2 updated to cite the new section and mirror the principle in the CA prompt.
+
+Closes Q7 jointly — the comment-flood pathology is addressed by (a) reference.md §Comments giving the CA a positive principle to follow, and (b) skill-contract.md S2 prompting the CA away from decision-log narration.
+
+---
+
+### Original write-up
 
 **Surfaced in:** test-d (`script.sh:12-300`+ — ~250 lines of NOTE-comment decision narration before any real code)
 
@@ -154,7 +162,13 @@ Reference's §Temp Files says: *"Pair every `mktemp` with `trap 'rm -rf "$path"'
 
 ---
 
-## Q7 — Script bloat: CA narrates every decision as a comment
+## Q7 — Script bloat: CA narrates every decision as a comment (RESOLVED 2026-04-13, jointly with Q3)
+
+**Resolution:** See Q3. Addressed by the new reference.md §Comments section (positive principle: comments as pseudocode/contract serving the next reader) and skill-contract.md S2 (CA prompt convention: write story-serving comments, list decisions in final message not in script).
+
+---
+
+### Original write-up
 
 **Surfaced in:** test-d (1536-line script, ~90% NOTE-comment narrative; actual code is ~100 lines)
 
