@@ -30,7 +30,13 @@ The CA followed §Examples verbatim per the spec's cue.
 
 ---
 
-### 2. §External Tools vs §Loops: counter-preserving iteration over `find`
+### 2. §External Tools vs §Loops: counter-preserving iteration over `find` (RESOLVED 2026-04-14)
+
+**Resolution:** added a new rule to §External Tools immediately after the macOS Darwin caveat. Names the two forms as alternatives: `-exec cmd {} +` for self-contained actions (subshell is fine; no tally needed), `while read … < <(find … -print0)` when the loop body must update script-local state. Italic backs the "one per case" framing. No cross-reference needed in §Loops — the §External Tools rule points to §Loops for the `while read` mechanics, one-way is sufficient.
+
+---
+
+### Original write-up
 
 **Surfaced in:** test-b (conformance scored 2 on §External Tools and 2 on §Loops)
 

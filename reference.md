@@ -521,6 +521,8 @@ Rules:
 - The `-fsSL` flag set for curl is invariant. `-f` fails on HTTP errors, `-sS` is silent-but-shows-real-errors, `-L` follows redirects.
 	- *Each flag fixes a real footgun: without `-f`, a 404's HTML body lands in the output file; without `-sS`, either progress bars pollute stdout or hard errors are swallowed; without `-L`, a 301 silently returns nothing. Memorize the four letters as one token.*
 - On macOS, `-exec cmd {} +` stops iterating on the first nonzero exit from `cmd` (Darwin bug). When partial results would be silent data loss, fall back to `-print0 | xargs -0`.
+- When the action body needs to update script-local state (counters, arrays, flags), do not reach for `find … -exec cmd {} +` — its child shell drops every assignment made inside `cmd`. Use the process-substitution loop instead: `while IFS= read -r -d '' var; do …; done < <(find … -print0)`. find emits NUL-terminated paths, the loop reads each one in the current shell, and assignments made inside the loop persist after it exits.
+	- *Two alternatives, one per case. `-exec +` is the default when the action is self-contained (the command itself is the whole job — `rm`, `chmod`, no tally back). The process-substitution loop is the default when the script needs the action's tally afterward. See §Loops for the `while read` mechanics.*
 
 Further research:
 1. [wooledge: UsingFind](https://mywiki.wooledge.org/UsingFind) — §7 "Actions in bulk" has the full xargs / `-print0` / `-exec +` treatment.
