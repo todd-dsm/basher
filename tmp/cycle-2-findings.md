@@ -48,16 +48,13 @@ Test-b needs bulk action across matching files AND script-local counters (`compr
 
 ---
 
-### 4. GNU-prefix tool preference (`gdate` / `gfind` / `gsed`)
+### 4. GNU-prefix tool preference (`gdate` / `gfind` / `gsed`) — CASCADIAN TERRITORY
 
-**Surfaced in:** test-d (defect L2 — `date` used where `gdate` was the spec's intent). **Repeat finding from cycle 1 (G2).**
+**Surfaced in:** test-d (defect L2 — `date` used where `gdate` was the spec's intent). **Repeat from cycle 1 (G2).**
 
-**Situation:** reference §External Tools has the Darwin `-exec +` caveat but no general rule for GNU-prefix variant preference on macOS. When a spec's platform note says "macOS with GNU coreutils," the CA has no cite-able rule to reach for `gdate`/`gfind`/`gsed`. Script A's CA used `gdate` because its spec pinned it; Script D's CA used `date` because its spec was silent. SRD v2.3 patched the spec platform notes, but the reference is still silent — any future spec that omits the instruction repeats the gap.
+**Disposition:** **deferred to cascadian, not a basher change.** When cascadian properly configures the CA's environment (PATH ordering, shim wrappers, or equivalent), `date`/`find`/`sed` will resolve to GNU variants on macOS by default. The CA writes plain tool names; the platform layer handles tool selection. Under that model, the reference doesn't need a GNU-prefix rule at all — the CA can't write `date` and get BSD semantics, so there's nothing to guard against.
 
-**Candidate fix:** add one sentence to §External Tools near the Darwin caveat:
-> *"On macOS with GNU coreutils installed, reach for the `g`-prefix variants (`gdate`, `gfind`, `gsed`) where BSD semantics differ. The target is GNU semantics, not BSD portability."*
-
-**Recommendation:** ship. Two cycles of signal; small, bounded, cite-able.
+**Next step:** raise as a cascadian feature request. No basher action.
 
 ---
 
