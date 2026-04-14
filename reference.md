@@ -24,6 +24,32 @@ Rules:
 
 ---
 
+## Printer Library
+
+<!-- The four helpers sourced from `scripts/lib/printer.func` have fixed behaviors scripts rely on. Rules here codify what each call guarantees — streams, return codes, rendering — so callers can reason about output routing and error propagation without reading the library's source. -->
+
+### Contract
+
+| Helper | Stream | Return | Behavior |
+|---|---|---|---|
+| `print_goal <msg>` | stdout | 0 | Centered banner framed with hyphens |
+| `print_req <msg>` | stdout | 0 | Indented requirement line |
+| `print_pass` | stdout | 0 | `    test passed` in green; takes no args, caller args discarded |
+| `print_error <reason>` | stderr | 1 | Centered red banner framed with tildes; returns 1 so `set -e` halts the script |
+
+### Rules
+
+- Streams are fixed. `print_goal`, `print_req`, `print_pass` go to stdout; `print_error` goes to stderr. Route the whole script's output with `script.sh >out 2>err`; do not redirect individual helpers at call sites.
+	- *Stream discipline is part of the contract. Redirecting `print_error` to stdout breaks the operator's ability to separate progress from failures with a single `2>errors.log`.*
+- `print_error` returns 1. Under `set -euo pipefail` a bare call halts the script at the point of failure — no separate `exit` needed. For per-iteration continue-on-error inside a loop, append `|| true` (see §Checks per-iteration rule).
+	- *The `return 1` semantics let the caller decide: default halt via `set -e`, opt-in continue via `|| true`. The library doesn't impose exit policy; the script does.*
+- `print_pass` is bare — no arguments. Per-iteration or per-item context belongs in `print_req` above the call.
+	- *Two strings saying the same thing is noise. `print_req` names what was tested; `print_pass` confirms it.*
+- Helpers tolerate empty-string and shell-metachar arguments without aborting. Quoting at the call site is the caller's responsibility per §Quoting.
+	- *The library passes its arguments through `printf '%s'` internally — no second round of expansion, no crash on empty input. The caller's job is to quote on the way in; the library's job is to render what arrives.*
+
+---
+
 ## Invocation
 
 <!-- A shared anchor for paths makes scripts simpler. If every script assumes a different working directory, relative paths become guesswork and scripts grow defensive prologues to compensate. One convention replaces all that ceremony. -->
