@@ -788,6 +788,15 @@ print_req 'Apply migration 0042'
 if ! migrate up 0042; then
     print_error 'migration 0042 did not apply cleanly'
 fi
+
+
+# ---
+# REQ3
+# ---
+print_req 'Verify cert expiry for each host'
+while IFS= read -r host; do
+    check_cert "$host" || print_error "$host: cert check failed" || true
+done < "$hosts_file"
 ```
 
 Rules:
@@ -797,8 +806,12 @@ Rules:
 	- *Shape B omits the success branch because under `set -euo pipefail` continued execution is the success signal — a `print_pass` there would duplicate the `print_req` above.*
 - `print_pass` takes no arguments. The `print_req` above it already named what was tested.
 	- *Two strings saying the same thing is noise. The helper prints a short success marker; the reader's context is the REQ description one line up.*
-- `print_error` takes a short reason — one line, a fragment that completes the sentence "it failed because…", fitting within the 79-char limit after the banner's centering padding. It prints a banner to stderr and exits the script with status 1. Do not add `exit` after it.
-	- *The reason is the one piece of information the operator doesn't already have. Keep it short; the banner does the visual work. Error-handling behavior lives in `print_error`; duplicating the exit at the call site splits that responsibility.*
+- `print_error` takes a short reason — one line, a fragment that completes the sentence "it failed because…", fitting within the 79-char limit after the banner's centering padding. It prints a banner to stderr and returns 1; under `set -euo pipefail`, the non-zero return propagates and halts the script. Do not add `exit` after it.
+	- *The reason is the one piece of information the operator doesn't already have. Keep it short; the banner does the visual work. `return 1` rather than `exit 1` lets a caller that wants to continue past a reported error suppress errexit locally with `|| true` (see the per-iteration loop rule below).*
+- **Per-iteration reporting inside a loop.** When the script should continue through per-iteration failures (report all bad items, not halt on the first), suppress `print_error`'s errexit propagation with a trailing `|| true`. Two forms match Shape A and Shape B:
+	- **Compact (Shape B, loop body):** `cmd || print_error "<reason>" || true` — test, report, continue. Use when "report and keep going" is the entire failure action.
+	- **Structured (Shape A, loop body):** `if cmd; then …; else print_error "<reason>" || true; …; fi` — the `else` branch has room for multiple statements (accumulate into an array, retry, log detail).
+	- *Each loop iteration is a check; the loop wraps them. `|| true` neutralizes `print_error`'s `return 1` per-iteration so `set -e` doesn't halt the script. Without the loop wrapper, `print_error` still halts — which is the correct behavior for fail-fast REQs outside a loop. Compact when simple; Structured when the failure branch needs room to grow.*
 - Use the `if / then / else / fi` block form in Shape A. Never `cmd && print_pass || print_error "…"`.
 	- *Block form reads top-to-bottom: test, pass path, fail path. The `&&/||` one-liner looks equivalent but isn't — if `print_pass` ever returns non-zero, the `||` fires. The block form has no such trap.*
 - Do not redirect print helpers. `print_goal`, `print_req`, `print_pass` go to stdout; `print_error` goes to stderr. The helpers manage their own streams.

@@ -2,7 +2,18 @@
 
 Questions surfaced during the 2026-04-13 pressure-test session. Each is a case where `reference.md` was silent or ambiguous AND the gap could not be resolved from reference content alone. Items are indexed for discussion.
 
-## Q1 — Per-iteration REQ reporting inside a loop
+## Q1 — Per-iteration REQ reporting inside a loop (RESOLVED 2026-04-13)
+
+**Resolution:** `print_error` in `share/printer.func` now returns 1 instead of exit 1. Reference §Checks gained:
+1. A third REQ in the example block showing the compact loop pattern (`cmd || print_error "…" || true`).
+2. Updated `print_error` rule reflecting the new semantics (return 1; errexit propagates under set -e; `|| true` is the local escape hatch).
+3. New rule: "Per-iteration reporting inside a loop" with two forms — **Compact** (Shape B, loop body: `cmd || print_error "…" || true`) for simple report-and-continue, and **Structured** (Shape A, loop body: `if/then/else` with room to grow) for failure branches that need multiple statements.
+
+Verified live: set -e halts after print_error in plain context; `|| true` neutralizes per-iteration.
+
+---
+
+### Original write-up
 
 **Surfaced in:** test-a (cert-expiry checker), `script.sh:139-160`
 
