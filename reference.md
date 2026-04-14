@@ -258,7 +258,7 @@ Rules:
 	- *A real `disable=none` is a parse error (SC1073). The only clean state is an empty slot. Running ShellCheck on the finished script is the trigger for adding a directive.*
 - `PURPOSE` is one line. Name the action, not the implementation.
 	- *Readers scan PURPOSE to decide if this is the script they want. Long prose defeats scanning.*
-- `PREREQS` lists every resource the script needs to run properly. Functional test: if the script won't run properly without it, list it. Write `none` only when truly none. Do not remove the block.
+- `PREREQS` lists every resource the script needs to run properly. The test is functional: if the script won't run properly without it, it's a prerequisite. Common categories include installed tools, environment variables, credentials and tokens (e.g., a HashiCorp Vault token, AWS/GCP credentials, SSH keys), permissions (sudo, group membership, file mode), network access to specific hosts or services, required input files and their formats, and existing filesystem state — but the test is the rule, not the list. Write `none` only when the script truly requires nothing beyond a working bash shell. Do not remove the block.
 	- *A script that silently assumes `jq` is installed or a Vault token is present fails mysteriously. The functional test captures every such dependency, whether or not it fits a named category.*
 - `EXECUTE` shows the exact invocation: `scripts/name-of-script.sh` followed by any arguments the script accepts. Nothing else — no inline comments, no commentary, no CWD reminders. The Invocation rule already fixes the CWD; repeating it here is noise.
 	- *Copy-pasteable usage prevents misuse. "How do I run this?" should never be a question.*
@@ -373,6 +373,7 @@ Rules:
 	- *Every `$(cmd)` is a subshell; shell-internal expansion is free. On a loop of 10,000 paths that's real time. On a one-shot it's still the clearer form once you know it.*
 - Use `${var:-default}` for fallback, `${var:?message}` for required. Do not write `if [[ -z "$var" ]]; then var=default; fi`.
 	- *The expansion form is atomic — no chance to branch wrong, no extra lines. `${var:?message}` exits the script with the named message; the canonical placement is the top of the script (see Variables).*
+- Do not improvise expansions beyond the shapes shown. The operator set is large and subtle — `#` vs `##`, `%` vs `%%`, `:-` vs `-`, `/` vs `//` all differ in non-obvious ways; consult the references rather than guess.
 
 Further research:
 1. [BashGuide: Parameters — Parameter Expansion](https://mywiki.wooledge.org/BashGuide/Parameters#Parameter_Expansion): the complete operator set with examples.
@@ -556,7 +557,6 @@ Rules:
 - Pair every `mktemp` with `trap 'rm -rf "$path"' EXIT`. Set the trap immediately after the mktemp line, before any work.
 	- *The EXIT trap fires on success, failure, error, and ctrl-C alike. Setting it at the top (not at the end of main) means every abort path cleans up — including the error the script doesn't know about yet. For sensitive material, that discipline is the difference between "exists for a moment" and "leaks on crash."*
 - An `EXIT` trap body must not include `exit`. Let the script's real exit status flow through — `exit 0` (or any explicit code) in a trap body masks failures from `set -e`, `print_error`'s `return 1`, signals, and explicit error paths alike. For signal-specific behavior (e.g., normalize SIGINT's 130 to 0), use a dedicated `trap 'handler' INT` instead of overriding EXIT.
-	- *The trap is cleanup, not flow control. The script owns its exit status; the trap just has to not wreck it.*
 - Do not hand-roll temp paths. `/tmp/$$.tmp`, `/tmp/script.log`, or any literal fixed name is a race condition waiting to happen.
 	- *A literal name collides between concurrent invocations; `$$` collides when PIDs wrap. mktemp is the one right answer.*
 

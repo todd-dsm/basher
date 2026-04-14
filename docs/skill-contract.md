@@ -9,6 +9,24 @@ Two systems collaborate to produce sysadmin-quality shell scripts for a consumer
 - **basher** — knowledge side. Authoritative style rules, shapes, patterns, examples. This repository.
 - **`cascadian:bash` skill** — implementation side (CA). Reads basher, performs the operational steps (stage artifacts, emit scripts, run shellcheck, validate), respects the consumer's local configuration.
 
+## Two-tier CA model
+
+The `cascadian:bash` skill operates in **two distinct roles** with different underlying models:
+
+1. **Design / assemble / test** — **powerful model** (Sonnet/Opus class). Consumes `reference.md` in full to design, author, and test the script. Collaborates with domain experts (e.g., the mathematician). This is the role that produces the artifact.
+2. **Execute** — **less powerful model** (Haiku class). Runs a *tested, confirmed-good* script. Reads status, surfaces output, helps the operator. Does not author or modify scripts. The script does the work; this CA is a thin management layer.
+
+**`reference.md`'s audience is the design-phase CA.** The execute-phase CA does not read the reference at runtime — it invokes scripts that have already been made conformant.
+
+**Implications for condensation:**
+
+- The reference must be complete enough that conformance comes from the document, not from the model's capability. A powerful design-phase CA could often infer an unstated rule; a less-capable CA running the same reference could not. The bar is the latter.
+- Pressure-testing with Haiku as the authoring model (as in 2026-04-13) is intentional rigor — it reveals gaps the reference should close, even though the production writer is more capable.
+- Safe cuts are **exact duplicates** and **pure rhetoric**. Cuts based on "the CA already knows" are unsafe because they assume capability that varies by model.
+- Every retained rule should encode a **footgun, a WHEN-test, an enumerated operator boundary, or a specific failure mode**. If the italic only restates the rule as a slogan, it can go. If it names a mechanism or consequence, it stays.
+
+Reviews of `reference.md` are conducted with this bar explicitly in mind.
+
 This document states the dividing line between them, the shared conventions both must agree on, and the open items each side owes the other. basher authors this document; the skill team reads and executes against it. `skills/bash/SKILL.md` is read-only from basher's side; proposals flow here, implementation happens there.
 
 ---
