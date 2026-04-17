@@ -762,8 +762,12 @@ print_req 'Writing normalized records to disk...'
 
 Rules:
 - MAIN is framed (see Section Frame) with the `MAIN` label.
+- A script is a pipeline: input → process → output, chained. The operator provides a spark (arguments, env vars); Goal 1 transforms that input into state; each subsequent Goal consumes the prior Goal's output and produces the next input. The chain continues until the PURPOSE is met, then `fin~`.
+	- *This is the Unix process model applied to script structure. Each Goal is a process box with input and output. Nothing is decorative — every operation is load-bearing in the chain.*
 - MAIN contains one or more Goals. Each Goal is a sequential processing stage that leaves state for the next.
 	- *Goals support the script's PURPOSE. A single-step script has one Goal; a three-stage pipeline has three.*
+- Everything that serves one PURPOSE belongs in one script. When the PURPOSE changes, it's a new script. The test: if a Goal's purpose can be stated without mentioning the prior Goal, and the operator might reasonably invoke it separately, it belongs in a separate script.
+	- *Combine: a backup script reads a file list, builds an archive, and emails it — three Goals, one PURPOSE ("back up and deliver these files"), each Goal consuming the prior Goal's output. Separate: a Vault deployment uses `one-time-setup.sh` (enable APIs), `cluster-build.sh` (create cluster), `gen-tls-certs.sh` (generate certificates), `deploy-vault.sh` (deploy pods) — four scripts, four PURPOSEs, each independently invocable and retryable. The PURPOSE is the dividing line — not size, not complexity, not taste.*
 - Each Goal is framed (see Section Frame) in the prose-body form — a short `# Goal Purpose` line with optional `#  * detail` bullets. This block is written **for the maintainer reading the source** — describe what the Goal does, why, and any context the next author will need. Descriptive prose; can expand as context requires.
 - Immediately after the closing 79-char rule, call `print_goal '…'`. The message is an active verb with trailing `...` — what's happening now (e.g., `'Normalizing HR records...'`). It addresses the operator watching the script run.
 	- *Two audiences, two strings. The comment block explains; the `print_goal` narrates. Do not collapse them — the maintainer wants context, the operator wants a progress line.*
