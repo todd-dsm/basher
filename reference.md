@@ -767,6 +767,8 @@ Rules:
 - Each Goal is framed (see Section Frame) in the prose-body form — a short `# Goal Purpose` line with optional `#  * detail` bullets. This block is written **for the maintainer reading the source** — describe what the Goal does, why, and any context the next author will need. Descriptive prose; can expand as context requires.
 - Immediately after the closing 79-char rule, call `print_goal '…'`. The message is an active verb with trailing `...` — what's happening now (e.g., `'Normalizing HR records...'`). It addresses the operator watching the script run.
 	- *Two audiences, two strings. The comment block explains; the `print_goal` narrates. Do not collapse them — the maintainer wants context, the operator wants a progress line.*
+- After completing a Goal's REQs, re-read the Goal frame and `print_goal` message. If the work changed what the Goal actually does, update both to match the result.
+	- *Implementation reveals what design assumed. The Goal message serves the result, not the plan — when the data says the description drifted, update the description.*
 - MAIN's opener takes one of two shapes, determined by whether the script parses arguments:
 	- **No `parse_args` call:** MAIN's closing rule is also Goal 1's top rule — one shared line, no gap. The MAIN label block and the first Goal's divider merge into a single five-line frame.
 	- **With a `parse_args` call:** MAIN takes its own full three-line frame. `parse_args "$@"` follows MAIN's closing rule immediately (no blank line). Two blank lines then separate it from Goal 1's own three-line divider.
@@ -791,41 +793,47 @@ Rules:
 
 ```bash
 # ---
-# REQ1
+# create temp work space
 # ---
-print_req 'Drop rows without a phone number'
-if [[ -s "$hosts_csv" ]]; then
+print_req 'Creating temp working directory...'
+tmp_dir="$(mktemp -d /tmp/target-XXXXXX)"
+trap 'rm -rf "$tmp_dir"' EXIT
+if [[ -d "$tmp_dir" ]]; then
     print_pass
 else
-    print_error "input is empty or missing: $hosts_csv"
+    print_error "temp directory was not created: $tmp_dir"
 fi
 
 
 # ---
-# REQ2
+# ensure required tools are present
 # ---
-print_req 'Apply migration 0042'
-if ! migrate up 0042; then
-    print_error 'migration 0042 did not apply cleanly'
-fi
+print_req 'Verifying required tools...'
+for tool in "${required_tools[@]}"; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+        print_error "required tool not found: $tool"
+    fi
+done
 
 
 # ---
-# REQ3
+# check host reachability on expected ports
 # ---
-print_req 'Verify cert expiry for each host'
-while IFS= read -r host; do
-    check_cert "$host" || print_error "$host: cert check failed" || true
+print_req 'Checking host reachability on expected ports...'
+while IFS= read -r line; do
+    check_port "$addr" "$port" \
+        || print_error "$host: port $port unreachable" || true
 done < "$hosts_file"
 ```
 
 Rules:
+- Every REQ verifies its own outcome. If it does work, test that the work succeeded — don't assume. The operator needs to see what passed and what failed, and why. A `print_pass` that wasn't tested is a lie; a silent success is invisible.
 - Every REQ that performs a check uses one of exactly two shapes. No others.
 	- **Shape A — Both outcomes.** `print_req` announces, an `if` tests a value, `print_pass` on success, `print_error "reason"` on failure. Use when the conditional can succeed or fail and both branches need reporting.
 	- **Shape B — Check-is-command.** `print_req` announces, the command itself is the test, only failure is announced: `if ! command; then print_error 'reason'; fi`. Use when the command's success has no value to verify — continued execution under `set -euo pipefail` is the success signal.
 - `print_pass` takes no arguments. The `print_req` above it already named what was tested.
 	- *Two strings saying the same thing is noise. The helper prints a short success marker; the reader's context is the REQ description one line up.*
-- `print_error` takes a short reason — one line, a fragment that completes the sentence "it failed because…", fitting within the 79-char limit after the banner's centering padding. It prints a banner to stderr and returns 1; under `set -euo pipefail`, the non-zero return propagates and halts the script. Do not add `exit` after it.
+- `print_error` takes a short reason — one line, a fragment that completes the sentence "it failed because…", fitting within the 79-char limit after the banner's centering padding. It prints a banner to stderr and returns 1; under `set -euo pipefail`, the non-zero return propagates and halts the script. Do not add `exit` after it — `print_error` is the single termination mechanism for application failures (see §Printer Library for the contract). This holds inside `if`/`then` bodies: the `if` condition is protected from errexit, but statements within the branches are not.
 	- *The reason is the one piece of information the operator doesn't already have. Keep it short; the banner does the visual work. `return 1` rather than `exit 1` lets a caller that wants to continue past a reported error suppress errexit locally with `|| true` (see the per-iteration loop rule below).*
 - **Per-iteration reporting inside a loop.** When the script should continue through per-iteration failures (report all bad items, not halt on the first), suppress `print_error`'s errexit propagation with a trailing `|| true`. Two forms match Shape A and Shape B:
 	- **Compact (Shape B, loop body):** `cmd || print_error "<reason>" || true` — test, report, continue. Use when "report and keep going" is the entire failure action.

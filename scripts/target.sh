@@ -104,24 +104,27 @@ for tool in "${required_tools[@]}"; do
         print_error "required tool not found: $tool"
     fi
 done
-print_pass
 
 
 # ---
 # create temp work space
 # ---
-print_req 'Creating temp working directory'
+print_req 'Creating temp working directory...'
 tmp_dir="$(mktemp -d /tmp/target-XXXXXX)"
 trap 'rm -rf "$tmp_dir"' EXIT
-print_pass
+if [[ -d "$tmp_dir" ]]; then
+    print_pass
+else
+    print_error "temp directory was not created: $tmp_dir"
+fi
 
 
 # ---
 # download patch manifest
 # ---
 print_req 'Downloading patch manifest...'
-manifest_url="${MANIFEST_URL:-https://raw.githubusercontent.com/todd-dsm/basher/main/reference.md}"
-manifest="${tmp_dir}/manifest.csv"
+manifest_url="${MANIFEST_URL:-https://raw.githubusercontent.com/todd-dsm/basher/main/scripts/hosts.csv}"
+manifest="${tmp_dir}/hosts.csv"
 if curl -fsSL -o "$manifest" "$manifest_url"; then
     print_pass
 else
@@ -135,21 +138,19 @@ fi
 print_req 'Cleaning stale artifacts...'
 clean_artifacts "$tmp_dir"
 print_pass
+exit 0
 
 
 # -----------------------------------------------------------------------------
 # Audit hosts
-#  * iterate hosts CSV line by line
-#  * probe each host on ports 443 and 80
-#  * per-host continue-on-error
 # -----------------------------------------------------------------------------
-print_goal 'Auditing hosts'
+print_goal 'Auditing hosts...'
 
 
 # ---
-# REQ1
+# check host reachability on expected ports
 # ---
-print_req 'Check host reachability on expected ports'
+print_req 'Checking host reachability on expected ports...'
 while IFS= read -r line; do
     [[ "$line" = \#* ]] && continue
     host="${line%%,*}"
