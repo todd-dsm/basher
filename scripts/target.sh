@@ -4,9 +4,9 @@
 # -----------------------------------------------------------------------------
 #  PREREQS: a) source scripts/vars.env
 #           b) nc (netcat) and curl installed
-#           c) hosts CSV: hostname,address,role (one per line)
+#           c) hosts CSV: address,role (one per line)
 # -----------------------------------------------------------------------------
-#  EXECUTE: scripts/target.sh [-hv] [-t THRESHOLD] HOSTS_FILE
+#  EXECUTE: scripts/target.sh [-hv] [HOSTS_FILE]
 # -----------------------------------------------------------------------------
 set -euo pipefail
 
@@ -43,16 +43,16 @@ source scripts/lib/printer.func
 # Print invocation help.
 usage() {
     cat <<'EOF'
-Usage: scripts/target.sh [-hv] HOSTS_FILE
+Usage: scripts/target.sh [-hv] [HOSTS_FILE]
 
   -h, --help             show this help
   -v, --verbose          verbose output
-  HOSTS_FILE             path to hosts CSV
+  HOSTS_FILE             path to hosts CSV (default: downloaded from remote)
 EOF
 }
 
 
-# Parse flags and positional args; populate script-wide vars.
+# Parse flags; populate script-wide vars.
 parse_args() {
     while :; do
         case "${1:-}" in
@@ -99,21 +99,22 @@ clean_artifacts() {
 parse_args "$@"
 
 
-# # -----------------------------------------------------------------------------
-# # Prepare workspace
-# # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# Prepare workspace
+# -----------------------------------------------------------------------------
 print_goal 'Preparing the workspace...'
 
 
 # ---
-# Ensure the required tools are present on the system
+# ensure required tools are present
 # ---
-# print_req 'Verifying required tools...'
-# for tool in "${required_tools[@]}"; do
-#     if ! command -v "$tool" >/dev/null 2>&1; then
-#         print_error "required tool not found: $tool"
-#     fi
-# done
+print_req 'Verifying required tools...'
+for tool in "${required_tools[@]}"; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+        print_error "required tool not found: $tool"
+    fi
+done
+
 
 # ---
 # create temp work space
@@ -127,12 +128,13 @@ else
     print_pass
 fi
 
+
 # ---
-# download patch manifest
+# prepare data file
 # ---
 print_req 'Preparing data file...'
 if [[ -z "$hosts_file" ]]; then
-    print_info "no data file provided; assigning: manifest_url"
+    print_info "no data file provided; downloading from manifest_url"
     hosts_file="$manifest_url"
     manifest="${tmp_dir}/hosts.csv"
     if ! curl -fsSL -o "$manifest" "$hosts_file"; then
@@ -147,17 +149,12 @@ if [[ -z "${manifest:-}" ]]; then
     manifest="$hosts_file"
 fi
 
+
 # -----------------------------------------------------------------------------
 # Audit hosts
 # -----------------------------------------------------------------------------
 print_goal 'Auditing hosts...'
 
-# ---
-# testing convenience:
-# ---
-if [[ -z "$manifest" ]]; then
-    hosts_file="$manifest"
-fi
 
 # ---
 # check host reachability on expected ports
@@ -187,10 +184,10 @@ done < "$manifest"
 
 
 # ---
-# clean stale artifacts from prior runs
+# clean stale artifacts
 # ---
 print_req 'Cleaning stale artifacts...'
-clean_artifacts "$manifest"
+clean_artifacts "$tmp_dir"
 
 
 # -----------------------------------------------------------------------------
