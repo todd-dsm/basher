@@ -263,7 +263,7 @@ Further research:
 #  PURPOSE: One-line description of what this script does.
 # -----------------------------------------------------------------------------
 #  PREREQS: a) required tool or permission
-#           b) required environment variable
+#           b) source scripts/vars.env
 #           c) required input format
 # -----------------------------------------------------------------------------
 #  EXECUTE: scripts/name-of-script.sh [args]
@@ -285,6 +285,8 @@ Rules:
 	- *Readers scan PURPOSE to decide if this is the script they want. Long prose defeats scanning.*
 - `PREREQS` lists every resource the script needs to run properly. The test is functional: if the script won't run properly without it, it's a prerequisite. Common categories include installed tools, environment variables, credentials and tokens (e.g., a HashiCorp Vault token, AWS/GCP credentials, SSH keys), permissions (sudo, group membership, file mode), network access to specific hosts or services, required input files and their formats, and existing filesystem state — but the test is the rule, not the list. Write `none` only when the script truly requires nothing beyond a working bash shell. Do not remove the block.
 	- *A script that silently assumes `jq` is installed or a Vault token is present fails mysteriously. The functional test captures every such dependency, whether or not it fits a named category.*
+- When a script depends on environment variables sourced from a setup file, list the `source` command as a prereq — e.g., `source scripts/vars.env`. The file can be named anything that describes its contents; there may be more than one, though typically one suffices. The operator runs the `source` command before execution; the script asserts the variables exist (see §Variables).
+	- *The prereq tells the operator what to do; the `${VAR?}` assertion catches what they forgot. Together they close the gap between "the script needs this" and "the script fails clearly when it's missing."*
 - `EXECUTE` shows the exact invocation: `scripts/name-of-script.sh` followed by any arguments the script accepts. Nothing else — no inline comments, no commentary, no CWD reminders. The Invocation rule already fixes the CWD; repeating it here is noise.
 	- *Copy-pasteable usage prevents misuse. "How do I run this?" should never be a question.*
 
