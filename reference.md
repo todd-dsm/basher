@@ -393,6 +393,9 @@ vault_addr="${VAULT_ADDR:-https://localhost:8200}"
 script_name="${0##*/}"            # strip longest prefix ending in /
 script_dir="${0%/*}"               # strip shortest suffix starting with /
 
+# Capitalize first letter without forking to tr or awk
+host="${host^}"
+
 # Integer arithmetic
 count=$((retries + 1))
 ```
@@ -402,6 +405,8 @@ Rules:
 	- *Every `$(cmd)` is a subshell; shell-internal expansion is free. On a loop of 10,000 paths that's real time. On a one-shot it's still the clearer form once you know it.*
 - Use `${var:-default}` for fallback, `${var:?message}` for required. Do not write `if [[ -z "$var" ]]; then var=default; fi`.
 	- *The expansion form is atomic — no chance to branch wrong, no extra lines. `${var:?message}` exits the script with the named message; the canonical placement is the top of the script (see Variables).*
+- Use `${var^}` / `${var^^}` to uppercase first letter / entire value, and `${var,}` / `${var,,}` to lowercase. All are in-shell — no fork to `tr`, `awk`, or `sed`.
+	- *String case transforms are common in display formatting and key normalization. The shell-internal form is zero-cost compared to forking an external tool per iteration.*
 - Do not improvise expansions beyond the shapes shown. The operator set is large and subtle — `#` vs `##`, `%` vs `%%`, `:-` vs `-`, `/` vs `//` all differ in non-obvious ways; consult the references rather than guess.
 
 Further research:
@@ -626,6 +631,12 @@ render_host() {
 	local name="$1" ip="$2"
 	printf '%-20s %s\n' "$name" "$ip"
 }
+
+# Capitalize the first letter of a named variable.
+capitalize() {
+	local -n ref="$1"
+	ref="${ref^}"
+}
 ```
 
 Rules:
@@ -642,6 +653,8 @@ Rules:
 	- *Two blank lines + a comment is the standard sibling-block separator.*
 - Declare locals with `local`. Return status with `return N`; return values via stdout.
 	- *Without `local`, every assignment leaks into the caller's scope and silently clobbers state. Bash functions can only return an integer 0–255 as status — text must travel through stdout.*
+- When a function needs to modify the caller's variable in place, use `local -n ref="$1"` to create a nameref. Pass the variable *name* (no `$`), not its value. The nameref aliases the caller's variable — assignments to `ref` modify the original directly, no subshell needed.
+	- *`$(func "$var")` forks a subshell to capture stdout. `func var` with a nameref modifies in place — zero forks, zero cost. Reach for namerefs before command substitution when the function's job is to transform a value the caller already holds.*
 - Comment above each function with its purpose. Compact — one line when possible, more only when needed.
 	- *A name plus a short intent line is all the next reader needs. Prose longer than the function body is a smell.*
 
