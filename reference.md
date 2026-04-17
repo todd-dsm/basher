@@ -827,7 +827,9 @@ done < "$hosts_file"
 ```
 
 Rules:
-- Every REQ verifies its own outcome. If it does work, test that the work succeeded — don't assume. The operator needs to see what passed and what failed, and why. A `print_pass` that wasn't tested is a lie; a silent success is invisible.
+- Test whenever possible. Every operation that can fail should be tested. The operator needs to see what passed, what failed, and why. A `print_pass` that wasn't tested is a lie; a silent success is invisible.
+- Fail first, earn success. Test for the negative (`if !`) and include an `else` for the success path. Give the script every opportunity to fail before reporting success. Code that survives a gauntlet of failure tests deserves to be in production; code that only checked the happy path doesn't.
+	- *The two rules above govern all checks. The shapes below are the implementation.*
 - Every REQ that performs a check uses one of exactly two shapes. No others.
 	- **Shape A — Both outcomes.** `print_req` announces, an `if` tests a value, `print_pass` on success, `print_error "reason"` on failure. Use when the conditional can succeed or fail and both branches need reporting.
 	- **Shape B — Check-is-command.** `print_req` announces, the command itself is the test, only failure is announced: `if ! command; then print_error 'reason'; fi`. Use when the command's success has no value to verify — continued execution under `set -euo pipefail` is the success signal.

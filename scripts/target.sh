@@ -78,8 +78,12 @@ check_port() {
 # Clean stale artifacts from a prior run's temp dir.
 clean_artifacts() {
     local target_dir="$1"
-    find "$target_dir" -type f -name '*.tmp' \
-        -mtime +1 -exec rm {} +
+    if ! find "$target_dir" -type f -name '*.tmp' \
+        -mtime +1 -exec rm {} +; then
+        print_error "failed to clean stale artifacts in $target_dir"
+    else
+        print_pass
+    fi
 }
 
 
@@ -137,7 +141,6 @@ fi
 # ---
 print_req 'Cleaning stale artifacts...'
 clean_artifacts "$tmp_dir"
-print_pass
 exit 0
 
 
