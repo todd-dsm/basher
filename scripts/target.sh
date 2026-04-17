@@ -74,6 +74,13 @@ check_port() {
 }
 
 
+# Capitalize the first letter of a named variable.
+capitalize() {
+    local -n ref="$1"
+    ref="${ref^}"
+}
+
+
 # Clean stale artifacts from a prior run's temp dir.
 clean_artifacts() {
     local target_dir="$1"
@@ -156,8 +163,10 @@ fi
 # check host reachability on expected ports
 # ---
 print_req 'Checking host reachability on expected ports...'
-while IFS=, read -r host addr _; do
-    [[ "$host" = \#* ]] && continue
+while IFS=, read -r addr _; do
+    [[ "$addr" = \#* ]] && continue
+    host="${addr%%.*}"
+    capitalize host
     total_count=$((total_count + 1))
     host_ok=true
     for port in "${ports[@]}"; do
