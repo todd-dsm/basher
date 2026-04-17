@@ -17,7 +17,7 @@ Further-research entries are tagged *practice* (implementation best practices, t
 <!-- basher ships one canonical artifact. Every compliant script presumes it. -->
 
 Rules:
-- The starter kit is one file at a fixed target path: `scripts/lib/printer.func` — shared output helpers: `print_goal`, `print_req`, `print_pass`, `print_error`.
+- The starter kit is one file at a fixed target path: `scripts/lib/printer.func` — shared output helpers: `print_goal`, `print_req`, `print_pass`, `print_info`, `print_error`.
 	- *The printer's helpers drive every compliant script's visible output. The script anatomy itself is constructed per project by following this reference; the printer is passed whole.*
 - Every compliant script sources the printer: `source scripts/lib/printer.func`.
 	- *The Main-program conventions (announcing goals, reporting pass/fail) presuppose these helpers. A script that doesn't source them exits the scope of this reference.*
@@ -35,11 +35,12 @@ Rules:
 | `print_goal <msg>` | stdout | 0 | Centered banner framed with hyphens |
 | `print_req <msg>` | stdout | 0 | Indented requirement line |
 | `print_pass` | stdout | 0 | `    test passed` in green; takes no args, caller args discarded |
+| `print_info <msg>` | stdout | 0 | Plain text, 4-space indent; informational, not a test result |
 | `print_error <reason>` | stderr | 1 | Centered red banner framed with tildes; returns 1 so `set -e` halts the script |
 
 ### Rules
 
-- Streams are fixed. `print_goal`, `print_req`, `print_pass` go to stdout; `print_error` goes to stderr. Route the whole script's output with `script.sh >out 2>err`; do not redirect individual helpers at call sites.
+- Streams are fixed. `print_goal`, `print_req`, `print_pass`, `print_info` go to stdout; `print_error` goes to stderr. Route the whole script's output with `script.sh >out 2>err`; do not redirect individual helpers at call sites.
 	- *Stream discipline is part of the contract. Redirecting `print_error` to stdout breaks the operator's ability to separate progress from failures with a single `2>errors.log`.*
 - `print_error` returns 1. Under `set -euo pipefail` a bare call halts the script at the point of failure — no separate `exit` needed. For per-iteration continue-on-error inside a loop, append `|| true` (see §Checks per-iteration rule).
 	- *The `return 1` semantics let the caller decide: default halt via `set -e`, opt-in continue via `|| true`. The library doesn't impose exit policy; the script does.*
@@ -833,7 +834,21 @@ done < "$hosts_file"
 Rules:
 - Test whenever possible. Every operation that can fail should be tested. The operator needs to see what passed, what failed, and why. A `print_pass` that wasn't tested is a lie; a silent success is invisible.
 - Fail first, earn success. Test for the negative (`if !`) and include an `else` for the success path. Give the script every opportunity to fail before reporting success. Code that survives a gauntlet of failure tests deserves to be in production; code that only checked the happy path doesn't.
-	- *The two rules above govern all checks. The shapes below are the implementation.*
+	- *The two rules above govern all checks. The conditional expressions below are the building blocks; the shapes are the implementation.*
+- Bash conditional expressions are the tests inside `[[ ]]`. Four cover most sysadmin checks:
+
+  | Expression | Tests | Example |
+  |---|---|---|
+  | `-z "$var"` | string is empty (zero length) | `if [[ -z "$hosts_file" ]]; then` — no input provided |
+  | `-n "$var"` | string is not empty | `if [[ -n "$reply" ]]; then` — got a response |
+  | `-f "$path"` | file exists and is a regular file | `if [[ ! -f "$config" ]]; then` — missing config |
+  | `-d "$path"` | directory exists | `if [[ -d "$tmp_dir" ]]; then` — workspace ready |
+
+  When these four don't satisfy the requirement, consult the full set before improvising.
+	- *The conditional expression set is large — file age, permissions, symlinks, socket tests, string comparison, regex matching. The four above handle the majority of real checks. Reaching for the reference beats guessing at an operator you've half-remembered.*
+
+Further research:
+1. [Bash Conditional Expressions](https://www.gnu.org/software/bash/manual/html_node/Bash-Conditional-Expressions.html) — *reference.* The complete operator set with exact semantics.
 - Every REQ that performs a check uses one of exactly two shapes. No others.
 	- **Shape A — Both outcomes.** `print_req` announces, an `if` tests a value, `print_pass` on success, `print_error "reason"` on failure. Use when the conditional can succeed or fail and both branches need reporting.
 	- **Shape B — Check-is-command.** `print_req` announces, the command itself is the test, only failure is announced: `if ! command; then print_error 'reason'; fi`. Use when the command's success has no value to verify — continued execution under `set -euo pipefail` is the success signal.
@@ -847,7 +862,7 @@ Rules:
 	- *Each loop iteration is a check; the loop wraps them. `|| true` neutralizes `print_error`'s `return 1` per-iteration so `set -e` doesn't halt the script. Without the loop wrapper, `print_error` still halts — which is the correct behavior for fail-fast REQs outside a loop. Compact when simple; Structured when the failure branch needs room to grow.*
 - Use the `if / then / else / fi` block form in Shape A. Never `cmd && print_pass || print_error "…"`.
 	- *Block form reads top-to-bottom: test, pass path, fail path. The `&&/||` one-liner looks equivalent but isn't — if `print_pass` ever returns non-zero, the `||` fires. The block form has no such trap.*
-- Do not redirect print helpers. `print_goal`, `print_req`, `print_pass` go to stdout; `print_error` goes to stderr. The helpers manage their own streams.
+- Do not redirect print helpers. `print_goal`, `print_req`, `print_pass`, `print_info` go to stdout; `print_error` goes to stderr. The helpers manage their own streams.
 	- *Stream discipline is part of their contract. Piping `print_error` to stdout breaks the operator's ability to separate progress from failures with a single `2>errors.log`.*
 
 Further research:

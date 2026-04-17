@@ -23,19 +23,20 @@ timeout="${CONNECT_TIMEOUT:-3}"
 pass_count=0
 fail_count=0
 total_count=0
+manifest_url='https://raw.githubusercontent.com/todd-dsm/basher/main/scripts/hosts.csv'
 
 # Arrays
 ports=(443 80)
 required_tools=(nc curl)
 
-# Data — structured inputs the script reads (set by parse_args)
-hosts_file=''
+# Data — structured inputs the script reads
+hosts_file="${1:-}"
 
 
 # -----------------------------------------------------------------------------
 # FUNCTIONS
 # -----------------------------------------------------------------------------
-# Output helpers: print_goal, print_req, print_pass, print_error
+# Output helpers: print_goal, print_req, print_pass, print_info, print_error
 source scripts/lib/printer.func
 
 
@@ -63,8 +64,6 @@ parse_args() {
         esac
         shift
     done
-    : "${1?missing HOSTS_FILE; see -h}"
-    hosts_file="$1"
 }
 
 
@@ -93,22 +92,21 @@ clean_artifacts() {
 parse_args "$@"
 
 
-# -----------------------------------------------------------------------------
-# Prepare workspace
-# -----------------------------------------------------------------------------
+# # -----------------------------------------------------------------------------
+# # Prepare workspace
+# # -----------------------------------------------------------------------------
 print_goal 'Preparing the workspace...'
 
 
 # ---
 # Ensure the required tools are present on the system
 # ---
-print_req 'Verifying required tools...'
-for tool in "${required_tools[@]}"; do
-    if ! command -v "$tool" >/dev/null 2>&1; then
-        print_error "required tool not found: $tool"
-    fi
-done
-
+# print_req 'Verifying required tools...'
+# for tool in "${required_tools[@]}"; do
+#     if ! command -v "$tool" >/dev/null 2>&1; then
+#         print_error "required tool not found: $tool"
+#     fi
+# done
 
 # ---
 # create temp work space
@@ -116,49 +114,50 @@ done
 print_req 'Creating temp working directory...'
 tmp_dir="$(mktemp -d /tmp/target-XXXXXX)"
 trap 'rm -rf "$tmp_dir"' EXIT
-if [[ -d "$tmp_dir" ]]; then
-    print_pass
-else
+if [[ ! -d "$tmp_dir" ]]; then
     print_error "temp directory was not created: $tmp_dir"
+else
+    print_pass
 fi
-
 
 # ---
 # download patch manifest
 # ---
-print_req 'Downloading patch manifest...'
-manifest_url="${MANIFEST_URL:-https://raw.githubusercontent.com/todd-dsm/basher/main/scripts/hosts.csv}"
-manifest="${tmp_dir}/hosts.csv"
-if curl -fsSL -o "$manifest" "$manifest_url"; then
-    print_pass
-else
-    print_error "failed to fetch manifest: $manifest_url"
+print_req 'Preparing data file...'
+if [[ -z "$hosts_file" ]]; then
+    print_info "no data file provided; assigning: manifest_url"
+    hosts_file="$manifest_url"
+    manifest="${tmp_dir}/hosts.csv"
+    if ! curl -fsSL -o "$manifest" "$hosts_file"; then
+        print_error "failed to fetch data file"
+    else
+        hosts_file="$manifest"
+        print_pass
+    fi
 fi
 
-
-# ---
-# clean stale artifacts from prior runs
-# ---
-print_req 'Cleaning stale artifacts...'
-clean_artifacts "$tmp_dir"
-exit 0
-
+if [[ -z "${manifest:-}" ]]; then
+    manifest="$hosts_file"
+fi
 
 # -----------------------------------------------------------------------------
 # Audit hosts
 # -----------------------------------------------------------------------------
 print_goal 'Auditing hosts...'
 
+# ---
+# testing convenience:
+# ---
+if [[ -z "$manifest" ]]; then
+    hosts_file="$manifest"
+fi
 
 # ---
 # check host reachability on expected ports
 # ---
 print_req 'Checking host reachability on expected ports...'
-while IFS= read -r line; do
-    [[ "$line" = \#* ]] && continue
-    host="${line%%,*}"
-    addr="${line#*,}"
-    addr="${addr%%,*}"
+while IFS=, read -r host addr _; do
+    [[ "$host" = \#* ]] && continue
     total_count=$((total_count + 1))
     host_ok=true
     for port in "${ports[@]}"; do
@@ -175,7 +174,14 @@ while IFS= read -r line; do
     else
         fail_count=$((fail_count + 1))
     fi
-done < "$hosts_file"
+done < "$manifest"
+
+
+# ---
+# clean stale artifacts from prior runs
+# ---
+print_req 'Cleaning stale artifacts...'
+clean_artifacts "$manifest"
 
 
 # -----------------------------------------------------------------------------

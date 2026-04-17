@@ -62,6 +62,13 @@ print_pass() {
 }
 
 
+# Info message: plain text, 4-space indent, to stdout.
+print_info() {
+    local theMessage="$*"
+    printf '    %s\n' "$theMessage"
+}
+
+
 # Error announcement: red banner bordered with tildes, to stderr, returns 1.
 # Under `set -e`, the non-zero return propagates and halts the script. Callers
 # that need to continue past a reported error suppress errexit with `|| true`.
