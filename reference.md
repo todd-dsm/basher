@@ -345,14 +345,15 @@ Further research:
 : "${API_TOKEN?  API_TOKEN is missing!}"
 : "${CONFIG_PATH?  CONFIG_PATH must point at a readable file}"
 
-# Sourced — variables shared across scripts
-source scripts/lib/common.env
-
 # Assignments and flags
 region='us-west-2'
 dry_run=false
 max_retries=3
 threshold='1,000,000'
+
+# Arrays
+ports=(443 80)
+required_tools=(nc curl)
 
 # Data — structured inputs the script reads
 hosts_csv='etc/hosts.csv'
@@ -365,8 +366,8 @@ Rules:
 	- *The frame is the script's hardest visual break: "new phase starts here."*
 - Assert required inputs with `: "${VAR?  message}"`. The script exits immediately if unset.
 	- *Failing at the top with a named variable beats failing 200 lines later with a cryptic unbound-variable error or — worse — silent wrong behavior on an empty expansion.*
-- Group by origin: ENV (external), sourced (shared), local assignments, data pointers. Prune groups not used in this script — `template.sh` carries the full shape for reference.
-	- *The shape of the groups tells the next reader what the script depends on at a glance. A pruned script shows only real dependencies; nothing to mistake for a forgotten slot.*
+- Group by origin: ENV (external), assignments and flags (local scalars), arrays (local lists), data (file pointers). Add only the groups the script requires.
+	- *The shape of the groups tells the next reader what the script depends on at a glance. A group that isn't there is a dependency that doesn't exist.*
 - Name local assignments `snake_case`. Reserve `UPPER_CASE` for exports and script-level constants. No `camelCase`.
 	- *`snake_case` matches UNIX convention and keeps `set -x` output scannable.*
 - Quote string values; leave bare booleans and bare integers unquoted. Numbers formatted for display (commas, units) are strings — quote them.
@@ -728,37 +729,34 @@ Further research:
 # MAIN
 # -----------------------------------------------------------------------------
 # Normalize incoming HR records
-#  * drops rows with missing phone numbers
-#  * converts all phones to E.164
 # -----------------------------------------------------------------------------
-print_goal 'Normalizing HR records'
+print_goal 'Normalizing incoming HR records...'
 
 
 # ---
-# REQ1
+# drop rows with missing phone numbers
 # ---
-print_req 'Drop rows without a phone number'
+print_req 'Dropping rows without a phone number...'
 # ... body: whatever legal bash the REQ needs ...
 
 
 # ---
-# REQ2
+# convert all phones to E.164
 # ---
-print_req 'Convert phone numbers to E.164'
+print_req 'Converting phone numbers to E.164...'
 # ... body ...
 
 
 # -----------------------------------------------------------------------------
 # Emit enriched CSV
-#  * writes to /tmp/hr-out.csv
 # -----------------------------------------------------------------------------
-print_goal 'Writing enriched CSV'
+print_goal 'Writing enriched CSV...'
 
 
 # ---
-# REQ1
+# write normalized records to disk
 # ---
-print_req 'Write normalized records to disk'
+print_req 'Writing normalized records to disk...'
 # ... body ...
 ```
 
@@ -767,7 +765,7 @@ Rules:
 - MAIN contains one or more Goals. Each Goal is a sequential processing stage that leaves state for the next.
 	- *Goals support the script's PURPOSE. A single-step script has one Goal; a three-stage pipeline has three.*
 - Each Goal is framed (see Section Frame) in the prose-body form — a short `# Goal Purpose` line with optional `#  * detail` bullets. This block is written **for the maintainer reading the source** — describe what the Goal does, why, and any context the next author will need. Descriptive prose; can expand as context requires.
-- Immediately after the closing 79-char rule, call `print_goal '…'`. This message is written **for the operator watching the script run** — the same Goal purpose rendered as a short verb-form announcement (typically `-ing`: "Normalizing HR records", "Writing enriched CSV").
+- Immediately after the closing 79-char rule, call `print_goal '…'`. The message is an active verb with trailing `...` — what's happening now (e.g., `'Normalizing HR records...'`). It addresses the operator watching the script run.
 	- *Two audiences, two strings. The comment block explains; the `print_goal` narrates. Do not collapse them — the maintainer wants context, the operator wants a progress line.*
 - MAIN's opener takes one of two shapes, determined by whether the script parses arguments:
 	- **No `parse_args` call:** MAIN's closing rule is also Goal 1's top rule — one shared line, no gap. The MAIN label block and the first Goal's divider merge into a single five-line frame.
@@ -778,10 +776,10 @@ Rules:
 	- *REQs support Goals the way Goals support the PURPOSE.*
 - Goals and REQs share script-global variables. A REQ may depend on state established by any earlier REQ — within its own Goal or in any prior Goal — since execution is top-to-bottom sequential.
 	- *A pipeline shape `A → B → C` is the norm: each REQ consumes what the previous one produced. Local-only state is the exception, achieved with `local` inside a function, not at REQ scope.*
-- REQ divider: short three-line form `# --- / # REQN / # ---`. The label is the bare sequential identifier — `REQ1`, `REQ2`, … — nothing else. Never concatenate with a purpose string.
-- REQ numbering resets per Goal. Each Goal's first REQ is `REQ1`.
-	- *REQs are scoped to their Goal. Per-Goal numbering lets Goals be reordered without renumbering the script.*
-- Immediately after the closing `# ---`, call `print_req 'description'`.
+- REQ divider: short three-line form `# --- / # label / # ---`. The label is a normative statement — what should be true when the REQ completes (e.g., `# download patch manifest`). It addresses the maintainer reading source.
+	- *The label is a contract: "after this block, this thing is done." A bare identifier (`REQ1`) tells the reader nothing; a normative statement tells them what to verify.*
+- Immediately after the closing `# ---`, call `print_req 'description...'`. The message is an active verb with trailing `...` — what's happening now (e.g., `'Downloading patch manifest...'`). It addresses the operator watching output.
+	- *Two audiences, two forms. The divider comment is a contract for the maintainer; the `print_req` message is a progress signal for the operator. Same pattern as Goal frames and `print_goal`.*
 - The REQ body follows `print_req`. Its content is outside the scope of these rules — a REQ may test a condition, run a command, transform data, loop, anything legal in bash.
 	- *Constructs used inside a REQ (conditionals, loops, I/O) have their own sections in this reference.*
 

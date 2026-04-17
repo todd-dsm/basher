@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-#  PURPOSE: Fleet patch-readiness audit — verify hosts are reachable,
-#           have disk space, and carry prerequisite packages.
+#  PURPOSE: Fleet patch-readiness audit — verify hosts are reachable
+#           and responsive on expected ports.
 # -----------------------------------------------------------------------------
-#  PREREQS: a) ssh key access to target hosts
-#           b) source scripts/vars.env (sets SSH_KEY_PATH)
-#           c) hosts CSV: hostname,ip,role (one per line)
+#  PREREQS: a) source scripts/vars.env
+#           b) nc (netcat) and curl installed
+#           c) hosts CSV: hostname,address,role (one per line)
 # -----------------------------------------------------------------------------
 #  EXECUTE: scripts/target.sh [-hv] [-t THRESHOLD] HOSTS_FILE
 # -----------------------------------------------------------------------------
@@ -19,10 +19,14 @@ set -euo pipefail
 
 # Assignments and flags
 verbose=false
-threshold=90
-output_dir='/tmp'
+timeout="${CONNECT_TIMEOUT:-3}"
 pass_count=0
 fail_count=0
+total_count=0
+
+# Arrays
+ports=(443 80)
+required_tools=(nc curl)
 
 # Data — structured inputs the script reads (set by parse_args)
 hosts_file=''
@@ -38,11 +42,10 @@ source scripts/lib/printer.func
 # Print invocation help.
 usage() {
     cat <<'EOF'
-Usage: scripts/target.sh [-hv] [-t THRESHOLD] HOSTS_FILE
+Usage: scripts/target.sh [-hv] HOSTS_FILE
 
   -h, --help             show this help
   -v, --verbose          verbose output
-  -t, --threshold PCT    disk-usage threshold (default: 90)
   HOSTS_FILE             path to hosts CSV
 EOF
 }
@@ -54,11 +57,6 @@ parse_args() {
         case "${1:-}" in
             -h|--help)      usage; exit 0 ;;
             -v|--verbose)   verbose=true ;;
-            -t|--threshold)
-                [[ "${2:-}" ]] \
-                    || print_error '--threshold requires a value'
-                threshold="$2"; shift
-                ;;
             --)             shift; break ;;
             -?*)            usage >&2; exit 2 ;;
             *)              break ;;
@@ -70,16 +68,19 @@ parse_args() {
 }
 
 
-# TODO: check_host() — behavioral construct #5 (Redirection),
-#       #10 (Pipelines), #14a (Checks Shape A)
+# Probe a single host:port with nc; return 0/1.
+check_port() {
+    local host="$1" port="$2"
+    nc -z -w "$timeout" "$host" "$port" >/dev/null 2>&1
+}
 
 
-# TODO: check_packages() — behavioral construct #7 (Loop for-array),
-#       #14b (Checks Shape B)
-
-
-# TODO: clean_artifacts() — behavioral construct #8 (External Tools
-#       find)
+# Clean stale artifacts from a prior run's temp dir.
+clean_artifacts() {
+    local target_dir="$1"
+    find "$target_dir" -type f -name '*.tmp' \
+        -mtime +1 -exec rm {} +
+}
 
 
 # -----------------------------------------------------------------------------
@@ -89,24 +90,102 @@ parse_args "$@"
 
 
 # -----------------------------------------------------------------------------
-# TODO: Goal 1 — Prepare workspace
-#  * download patch manifest (curl)
-#  * create temp working directory (mktemp + trap)
-#  * clean stale artifacts from prior runs (find)
+# Prepare workspace
 # -----------------------------------------------------------------------------
-# print_goal 'Preparing workspace'
+print_goal 'Preparing the workspace...'
 
 
-# TODO: Goal 2 — Audit hosts
-#  * iterate hosts CSV (while-read loop)
-#  * check reachability (Checks Shape A)
-#  * check disk usage (pipeline + parameter expansion)
-#  * check prerequisite packages (for-array loop, Checks Shape B)
-#  * per-iteration continue-on-error (|| true)
+# ---
+# Ensure the required tools are present on the system
+# ---
+print_req 'Verifying required tools...'
+for tool in "${required_tools[@]}"; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+        print_error "required tool not found: $tool"
+    fi
+done
+print_pass
 
 
-# TODO: Goal 3 — Report results
-#  * multi-line printf summary with pass/fail/total counts
+# ---
+# create temp work space
+# ---
+print_req 'Creating temp working directory'
+tmp_dir="$(mktemp -d /tmp/target-XXXXXX)"
+trap 'rm -rf "$tmp_dir"' EXIT
+print_pass
+
+
+# ---
+# download patch manifest
+# ---
+print_req 'Downloading patch manifest...'
+manifest_url="${MANIFEST_URL:-https://raw.githubusercontent.com/todd-dsm/basher/main/reference.md}"
+manifest="${tmp_dir}/manifest.csv"
+if curl -fsSL -o "$manifest" "$manifest_url"; then
+    print_pass
+else
+    print_error "failed to fetch manifest: $manifest_url"
+fi
+
+
+# ---
+# clean stale artifacts from prior runs
+# ---
+print_req 'Cleaning stale artifacts...'
+clean_artifacts "$tmp_dir"
+print_pass
+
+
+# -----------------------------------------------------------------------------
+# Audit hosts
+#  * iterate hosts CSV line by line
+#  * probe each host on ports 443 and 80
+#  * per-host continue-on-error
+# -----------------------------------------------------------------------------
+print_goal 'Auditing hosts'
+
+
+# ---
+# REQ1
+# ---
+print_req 'Check host reachability on expected ports'
+while IFS= read -r line; do
+    [[ "$line" = \#* ]] && continue
+    host="${line%%,*}"
+    addr="${line#*,}"
+    addr="${addr%%,*}"
+    total_count=$((total_count + 1))
+    host_ok=true
+    for port in "${ports[@]}"; do
+        print_req "$host ($addr) :$port"
+        if check_port "$addr" "$port"; then
+            print_pass
+        else
+            print_error "$host: port $port unreachable" || true
+            host_ok=false
+        fi
+    done
+    if [[ "$host_ok" = true ]]; then
+        pass_count=$((pass_count + 1))
+    else
+        fail_count=$((fail_count + 1))
+    fi
+done < "$hosts_file"
+
+
+# -----------------------------------------------------------------------------
+# REPORT
+# -----------------------------------------------------------------------------
+printf '\n\n%s\n' "
+
+Patch-readiness summary:
+
+  hosts checked:  $total_count
+  passed:         $pass_count
+  failed:         $fail_count
+
+"
 
 
 # ---
