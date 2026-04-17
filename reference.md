@@ -476,6 +476,11 @@ while IFS= read -r cluster; do
     clusters+=("$cluster")
 done < <(aws eks list-clusters --output text)
 
+# Delimited input: split fields directly into named variables
+while IFS=, read -r host addr _; do
+    check_port "$addr" 443
+done < "$hosts_csv"
+
 # Iterate an array of known number of elements
 for server in "${key_servers[@]}"; do
     attempt_connect "$server"
@@ -487,8 +492,10 @@ Rules:
 	- *`while read` pulls one record at a time; memory usage is one line regardless of input size. For a command that returns a million rows, this is the only loop form that scales.*
 - Feed a `while read` loop with process substitution (`done < <(cmd)`), not a pipeline (`cmd | while read`). Process substitution keeps the loop in the current shell; the pipeline runs it in a subshell and drops every variable set inside.
 	- *Counters, accumulated arrays, and flags set inside a piped `while read` vanish when the loop exits — the subshell dies and takes its scope with it. The `< <(cmd)` form sidesteps that entirely. See Redirection for the mechanics of `<(cmd)`.*
-- Always `IFS= read -r`. `IFS=` prevents leading/trailing whitespace being stripped; `-r` prevents backslash interpretation.
+- Always `IFS= read -r` for verbatim line processing. `IFS=` prevents leading/trailing whitespace being stripped; `-r` prevents backslash interpretation.
 	- *`read` defaults to splitting on IFS and processing backslashes — both turn off when feeding records through the loop verbatim. `IFS= read -r` is the shape that preserves the record you were given.*
+- When the input has a known delimiter (CSV, colon-separated, tab-delimited), set `IFS` to that delimiter and assign fields directly to named variables: `while IFS=, read -r host addr _; do`. Use `_` for unused columns.
+	- *Field splitting at `read` time replaces multi-line parameter expansion (`${line%%,*}`, `${line#*,}`) with a single declaration. Each column gets a name; the loop body reads as intent, not extraction surgery.*
 - Use `for x in "${arr[@]}"` when the items are a known array that fits in memory.
 	- *`for` reads the whole list into the loop header before iteration starts — fine for a ten-item array, wrong shape for a stream of unknown size.*
 
